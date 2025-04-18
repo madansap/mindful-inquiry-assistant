@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 interface UseVoiceRecordingProps {
   onRecordingComplete: (text: string) => void;
@@ -8,6 +9,7 @@ interface UseVoiceRecordingProps {
 }
 
 export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceRecordingProps) => {
+  const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
@@ -45,23 +47,38 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
           reader.readAsDataURL(audioBlob);
           
           reader.onloadend = async () => {
-            const base64Audio = (reader.result as string).split(',')[1]; // Remove the data URL prefix
-            
-            // Send to our Edge Function
-            const { data, error } = await supabase.functions.invoke('voice-to-text', {
-              body: { audioBlob: base64Audio }
-            });
+            try {
+              const base64Audio = (reader.result as string).split(',')[1]; // Remove the data URL prefix
+              
+              // Send to our Edge Function
+              const { data, error } = await supabase.functions.invoke('voice-to-text', {
+                body: { audioBlob: base64Audio }
+              });
 
-            if (error) {
-              console.error('Speech-to-text error:', error);
-              onError?.(new Error(`Failed to convert speech to text: ${error.message}`));
-              return;
-            }
+              if (error) {
+                console.error('Speech-to-text error:', error);
+                toast({
+                  variant: "destructive",
+                  title: "Transcription Error",
+                  description: `Failed to convert speech to text: ${error.message}`,
+                });
+                onError?.(new Error(`Failed to convert speech to text: ${error.message}`));
+                return;
+              }
 
-            if (data && data.text) {
-              onRecordingComplete(data.text);
-            } else {
-              onError?.(new Error('No text received from speech-to-text conversion'));
+              if (data && data.text) {
+                onRecordingComplete(data.text);
+              } else {
+                toast({
+                  variant: "destructive",
+                  title: "Transcription Error",
+                  description: "No text received from transcription",
+                });
+                onError?.(new Error('No text received from speech-to-text conversion'));
+              }
+            } catch (err) {
+              console.error('Error processing base64:', err);
+              onError?.(err as Error);
             }
           };
         } catch (error) {
@@ -74,6 +91,11 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
       setIsRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
+      toast({
+        variant: "destructive",
+        title: "Microphone Error",
+        description: "Failed to access your microphone. Please make sure it's connected and permissions are granted.",
+      });
       onError?.(error as Error);
     }
   };

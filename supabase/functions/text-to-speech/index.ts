@@ -44,13 +44,14 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text()
+      console.error('ElevenLabs API error:', errorText)
       throw new Error(`Failed to convert text to speech: ${errorText}`)
     }
 
     // Get the audio blob and convert to base64
     const audioArrayBuffer = await response.arrayBuffer()
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)))
-
+    
     return new Response(
       JSON.stringify({ audio: base64Audio }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

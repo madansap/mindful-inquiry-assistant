@@ -30,8 +30,12 @@ serve(async (req) => {
       headers: {
         'Accept': 'application/json',
         'xi-api-key': apiKey,
+        'Content-Type': 'application/json'
       },
-      body: audioBlob, // The base64 data is already parsed into binary by the fetch API
+      body: JSON.stringify({
+        audio: audioBlob,
+        model_id: "whisper-1"
+      }),
     })
 
     if (!response.ok) {

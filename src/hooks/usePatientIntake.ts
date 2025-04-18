@@ -39,7 +39,9 @@ export const usePatientIntake = () => {
   const handleAISpeak = async (text: string) => {
     try {
       setIsSpeaking(true);
+      console.log("Generating speech for:", text);
       const audioUrl = await textToSpeech(text);
+      console.log("Audio URL generated:", audioUrl);
       await playAudio(audioUrl);
     } catch (error) {
       console.error('Error in AI speech:', error);
@@ -87,7 +89,18 @@ export const usePatientIntake = () => {
   };
 
   const handleRecordingComplete = async (text: string) => {
-    if (!text) return;
+    if (!text) {
+      toast({
+        title: "No speech detected",
+        description: "We couldn't hear your response. Please try again.",
+        variant: "default"
+      });
+      setIsListening(false);
+      setTimeout(() => setIsListening(true), 1000);
+      return;
+    }
+
+    console.log("Recording complete, transcribed text:", text);
     setIsListening(false);
     
     // Update the current message with the transcribed text
@@ -130,11 +143,20 @@ export const usePatientIntake = () => {
   };
 
   const handleRecordingError = (error: Error) => {
+    console.error("Recording error:", error);
     toast({
       variant: "destructive",
       title: "Recording Error",
       description: error.message,
     });
+    
+    // Reset listening state after error
+    setIsListening(false);
+    
+    // Restart listening after a brief pause
+    if (step === 'conversation' && !conversationEnded) {
+      setTimeout(() => setIsListening(true), 2000);
+    }
   };
 
   // Start listening whenever the assistant stops speaking (unless we're ending)
@@ -143,7 +165,10 @@ export const usePatientIntake = () => {
       const lastMessage = messages[messages.length - 1];
       
       if (lastMessage.sender === 'assistant') {
-        setIsListening(true);
+        console.log("Assistant finished speaking, starting to listen");
+        setTimeout(() => {
+          setIsListening(true);
+        }, 500);
       }
     }
   }, [step, isSpeaking, isListening, messages, conversationEnded]);

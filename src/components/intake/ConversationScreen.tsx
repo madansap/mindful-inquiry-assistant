@@ -40,24 +40,27 @@ export const ConversationScreen = ({
     onError: onRecordingError,
   });
 
-  // Update the parent component's listening state when recording state changes
+  // Sync recording state with parent's listening state
   useEffect(() => {
-    if (isRecording !== isListening) {
-      // This effect is just to sync the states if needed
-      // The actual state management happens in the parent component
-    }
-  }, [isRecording, isListening]);
-
-  const toggleRecording = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
+    if (isListening && !isRecording) {
+      console.log("Auto-starting recording");
       startRecording();
+    } else if (!isListening && isRecording) {
+      console.log("Auto-stopping recording");
+      stopRecording();
     }
-  };
+  }, [isListening, isRecording, startRecording, stopRecording]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    const messageContainer = document.querySelector('.message-container');
+    if (messageContainer) {
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+  }, [messages]);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto w-full">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center">
           <div className={`w-3 h-3 rounded-full mr-2 ${isListening || isSpeaking ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
@@ -83,7 +86,7 @@ export const ConversationScreen = ({
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4">
+      <div className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4 message-container">
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -147,13 +150,16 @@ export const ConversationScreen = ({
       <div className="flex items-center justify-center gap-6">
         <div className="flex flex-col items-center">
           <Button
-            onClick={toggleRecording}
+            onClick={() => isRecording ? stopRecording() : startRecording()}
             className={`w-12 h-12 rounded-full flex items-center justify-center ${isRecording ? 'bg-mindful-accent' : 'bg-gray-200'}`}
             variant="ghost"
+            type="button"
+            disabled={isSpeaking}
           >
-            <Mic className={isRecording ? 'text-mindful-secondary' : 'text-gray-400'} />
+            <Mic className={isRecording ? 'text-mindful-secondary animate-pulse' : 'text-gray-400'} />
           </Button>
           <VoiceVisualizer isActive={isRecording} isListening={true} />
+          <span className="text-xs mt-1">{isRecording ? 'Tap to stop' : 'Tap to speak'}</span>
         </div>
         
         <div className="flex flex-col items-center">
@@ -161,6 +167,7 @@ export const ConversationScreen = ({
             <Volume2 className={isSpeaking ? 'text-white' : 'text-gray-400'} />
           </div>
           <VoiceVisualizer isActive={isSpeaking} />
+          <span className="text-xs mt-1">{isSpeaking ? 'Speaking' : 'Waiting'}</span>
         </div>
       </div>
     </div>

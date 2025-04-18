@@ -13,6 +13,8 @@ export const defaultVoiceConfig: VoiceConfig = {
 
 export async function textToSpeech(text: string, config: VoiceConfig = defaultVoiceConfig) {
   try {
+    console.log('Converting text to speech:', text);
+    
     const { data, error } = await supabase.functions.invoke('text-to-speech', {
       body: {
         text,
@@ -26,7 +28,7 @@ export async function textToSpeech(text: string, config: VoiceConfig = defaultVo
       throw new Error(`Failed to convert text to speech: ${error.message}`);
     }
 
-    if (!data.audio) {
+    if (!data || !data.audio) {
       throw new Error('No audio received from text-to-speech function');
     }
 
