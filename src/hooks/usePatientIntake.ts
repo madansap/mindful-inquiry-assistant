@@ -90,7 +90,7 @@ export const usePatientIntake = () => {
       setIsTyping(true);
       
       await conversation.startSession({
-        agentId: "BUOFhT6jt80PMXtIH5Wc",
+        agentId: "BaJX191WNhRcvCkca54T", // Updated agent ID
         overrides: {
           agent: {
             prompt: {
