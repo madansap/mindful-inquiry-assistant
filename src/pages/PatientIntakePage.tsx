@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Mic, Volume2, User, Bot, XCircle } from 'lucide-react';
@@ -14,8 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
 import { useToast } from '@/components/ui/use-toast';
+import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
+import { textToSpeech, playAudio } from '@/services/voiceService';
 
 // Conversation message type
 interface Message {
@@ -40,6 +40,9 @@ const PatientIntakePage = () => {
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [microphoneAccess, setMicrophoneAccess] = useState(false);
   
+  // New state for handling voice interaction
+  const [isProcessing, setIsProcessing] = useState(false);
+
   // Mock protocol questions
   const protocolQuestions = [
     "How have you been feeling lately?",
@@ -121,18 +124,31 @@ const PatientIntakePage = () => {
     </div>
   );
   
-  // Request microphone access
+  // Function to handle AI speaking
+  const handleAISpeak = async (text: string) => {
+    try {
+      setIsSpeaking(true);
+      const audioUrl = await textToSpeech(text);
+      await playAudio(audioUrl);
+    } catch (error) {
+      console.error('Error in AI speech:', error);
+      toast({
+        variant: "destructive",
+        title: "Voice Error",
+        description: "Failed to generate AI speech. Please try again.",
+      });
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+  
+  // Modified requestMicrophoneAccess to use real voice
   const requestMicrophoneAccess = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Stop the stream immediately, we just needed the permission
-      stream.getTracks().forEach(track => track.stop());
-      
       setMicrophoneAccess(true);
       
-      // Mock initial assistant message to start conversation
-      const initialMessage: Message = {
+      const initialMessage = {
         id: Date.now().toString(),
         sender: 'assistant',
         text: "Thank you for providing your consent. I'm going to ask you some questions about your mental health. Please respond honestly, and take your time. Let's start: How have you been feeling lately?",
@@ -141,8 +157,10 @@ const PatientIntakePage = () => {
       
       setMessages([initialMessage]);
       setStep('conversation');
-      simulateSpeaking(initialMessage.text);
+      handleAISpeak(initialMessage.text);
       
+      // Stop the stream as we'll request it again when needed
+      stream.getTracks().forEach(track => track.stop());
     } catch (error) {
       console.error('Error accessing microphone:', error);
       setErrorDialogOpen(true);
@@ -246,6 +264,21 @@ const PatientIntakePage = () => {
     
     return protocolQuestions[questionIndex + 1];
   };
+  
+  // Modified effect to handle conversation flow with real voice
+  useEffect(() => {
+    if (step === 'conversation' && !isSpeaking && !isListening && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      
+      if (lastMessage.sender === 'assistant') {
+        const timer = setTimeout(() => {
+          handleAISpeak(lastMessage.text);
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [step, isSpeaking, isListening, messages]);
   
   // Effect to handle the conversation flow
   useEffect(() => {
