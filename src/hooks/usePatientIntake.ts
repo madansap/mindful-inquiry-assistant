@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { textToSpeech, playAudio } from '@/services/voiceService';
 import { useToast } from '@/components/ui/use-toast';
@@ -75,72 +74,40 @@ export const usePatientIntake = () => {
     }
   };
 
-  const simulateSpeaking = (text: string) => {
-    setIsSpeaking(true);
-    const duration = Math.max(2000, text.length * 40);
-    setTimeout(() => {
-      setIsSpeaking(false);
-    }, duration);
-  };
+  const handleRecordingComplete = async (text: string) => {
+    if (!text) return;
 
-  const simulateListening = () => {
-    setIsListening(true);
-    setCurrentUserMessage('');
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      sender: 'user',
+      text,
+      timestamp: new Date(),
+    };
     
-    const duration = 3000 + Math.random() * 3000;
-    let messageText = '';
-    
-    const typingInterval = setInterval(() => {
-      const responses = [
-        "I've been feeling quite tired lately, and sometimes a bit down.",
-        "My sleep has been interrupted. I often wake up in the middle of the night.",
-        "I've noticed I don't have much appetite these days.",
-        "I'm currently taking medication for my blood pressure.",
-        "Yes, I've experienced similar feelings in the past, especially during winter.",
-        "My energy is usually low in the morning, but gets better in the afternoon.",
-        "No, I don't have thoughts of harming myself or others.",
-        "Most days I feel okay, but sometimes I get unexpectedly sad or anxious.",
-        "Work has been very stressful recently, and I'm worried about my finances.",
-        "It's been hard to concentrate at work and I've been more irritable with my family."
-      ];
-      
-      messageText = responses[Math.floor(Math.random() * responses.length)];
-      const progressStep = Math.floor(Math.random() * 10) + 1;
-      
-      if (progressStep < messageText.length) {
-        setCurrentUserMessage(messageText.substring(0, progressStep));
-      }
-    }, 100);
+    setMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
     
     setTimeout(() => {
-      clearInterval(typingInterval);
-      setCurrentUserMessage(messageText);
-      setIsListening(false);
+      setIsTyping(false);
       
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        sender: 'user',
-        text: messageText,
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'assistant',
+        text: getNextQuestion(messages.length),
         timestamp: new Date(),
       };
       
-      setMessages(prev => [...prev, userMessage]);
-      setIsTyping(true);
-      
-      setTimeout(() => {
-        setIsTyping(false);
-        
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          sender: 'assistant',
-          text: getNextQuestion(messages.length),
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-        simulateSpeaking(assistantMessage.text);
-      }, 2000);
-    }, duration);
+      setMessages(prev => [...prev, assistantMessage]);
+      handleAISpeak(assistantMessage.text);
+    }, 2000);
+  };
+
+  const handleRecordingError = (error: Error) => {
+    toast({
+      variant: "destructive",
+      title: "Recording Error",
+      description: error.message,
+    });
   };
 
   const getNextQuestion = (messageCount: number) => {
@@ -171,16 +138,6 @@ export const usePatientIntake = () => {
     }
   }, [step, isSpeaking, isListening, messages]);
 
-  useEffect(() => {
-    if (step === 'conversation' && !isSpeaking && !isListening && messages.length > 0 && messages[messages.length - 1].sender === 'assistant') {
-      const timer = setTimeout(() => {
-        simulateListening();
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [step, isSpeaking, isListening, messages]);
-
   return {
     step,
     setStep,
@@ -195,5 +152,7 @@ export const usePatientIntake = () => {
     setErrorDialogOpen,
     microphoneAccess,
     requestMicrophoneAccess,
+    handleRecordingComplete,
+    handleRecordingError
   };
 };
