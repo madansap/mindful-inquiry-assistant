@@ -26,6 +26,11 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
 
   const startRecording = async () => {
     try {
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
@@ -50,6 +55,8 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
             try {
               const base64Audio = (reader.result as string).split(',')[1]; // Remove the data URL prefix
               
+              console.log("Sending audio to Supabase Edge Function");
+              
               // Send to our Edge Function
               const { data, error } = await supabase.functions.invoke('voice-to-text', {
                 body: { audioBlob: base64Audio }
@@ -68,6 +75,13 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
 
               if (data && data.text) {
                 onRecordingComplete(data.text);
+              } else if (data && data.error) {
+                toast({
+                  variant: "destructive", 
+                  title: "Transcription Error",
+                  description: data.error,
+                });
+                onError?.(new Error(data.error));
               } else {
                 toast({
                   variant: "destructive",
@@ -105,10 +119,7 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
       mediaRecorder.current.stop();
       setIsRecording(false);
       
-      // Stop all tracks to release the microphone
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      // We don't stop the tracks here, they'll be stopped when the onstop event handler finishes
     }
   };
 

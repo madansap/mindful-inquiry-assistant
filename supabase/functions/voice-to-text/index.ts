@@ -24,35 +24,45 @@ serve(async (req) => {
       throw new Error('Missing ElevenLabs API key')
     }
 
-    // Convert the audio to text using Eleven Labs API
+    console.log("Sending audio to ElevenLabs for transcription");
+    
+    // Convert base64 string to binary and create form data
+    const binaryStr = atob(audioBlob);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    
+    // Create FormData and append the audio file
+    const formData = new FormData();
+    const audioFile = new Blob([bytes], { type: 'audio/webm' });
+    formData.append("audio", audioFile);
+    formData.append("model_id", "whisper-1");
+    
+    // Call ElevenLabs API
     const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
         'xi-api-key': apiKey,
-        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        audio: audioBlob,
-        model_id: "whisper-1"
-      }),
+      body: formData,
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      console.error('ElevenLabs API error:', error)
-      throw new Error(`Failed to convert speech to text: ${error}`)
+      const errorText = await response.text();
+      console.error('ElevenLabs API error:', errorText);
+      throw new Error(`Failed to convert speech to text: ${response.statusText}`);
     }
 
-    const result = await response.json()
-    console.log('Speech to text result:', result)
+    const result = await response.json();
+    console.log('Speech to text result:', result);
     
     return new Response(
       JSON.stringify({ text: result.text }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Voice-to-text error:', error)
+    console.error('Voice-to-text error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
