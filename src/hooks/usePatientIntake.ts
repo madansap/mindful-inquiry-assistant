@@ -41,7 +41,7 @@ export const usePatientIntake = () => {
         const newMessage: Message = {
           id: Date.now().toString(),
           sender: message.source === 'user' ? 'user' : 'assistant',
-          text: message.message,
+          text: message.data?.message || '', // Access message via data.message
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
@@ -156,4 +156,3 @@ export const usePatientIntake = () => {
     handleRecordingError,
   };
 };
-
