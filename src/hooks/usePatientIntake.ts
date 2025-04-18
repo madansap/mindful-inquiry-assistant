@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { useToast } from '@/components/ui/use-toast';
@@ -11,7 +10,7 @@ export interface Message {
 }
 
 // This should be stored securely in environment variables in a production app
-const ELEVEN_LABS_API_KEY = ''; // Add your API key here
+const ELEVEN_LABS_API_KEY = process.env.ELEVEN_LABS_API_KEY || '';
 
 export const usePatientIntake = () => {
   const { toast } = useToast();
@@ -20,11 +19,10 @@ export const usePatientIntake = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
-  const [apiKey, setApiKey] = useState(ELEVEN_LABS_API_KEY);
 
   // Initialize ElevenLabs conversation
   const conversation = useConversation({
-    apiKey: apiKey, // Add API key here
+    apiKey: ELEVEN_LABS_API_KEY,
     onConnect: () => {
       console.log("Connected to ElevenLabs");
       toast({
@@ -69,19 +67,14 @@ export const usePatientIntake = () => {
     },
   });
 
-  // Allow setting API key for testing purposes
-  const setElevenLabsApiKey = useCallback((key: string) => {
-    setApiKey(key);
-  }, []);
-
   // Start conversation session with ElevenLabs
   const startConversation = useCallback(async () => {
     try {
-      if (!apiKey) {
+      if (!ELEVEN_LABS_API_KEY) {
         toast({
           variant: "destructive",
-          title: "API Key Missing",
-          description: "Please provide your ElevenLabs API key to start the conversation.",
+          title: "Configuration Error",
+          description: "Voice assistant is not properly configured. Please contact support.",
         });
         return;
       }
@@ -90,7 +83,7 @@ export const usePatientIntake = () => {
       setIsTyping(true);
       
       await conversation.startSession({
-        agentId: "BaJX191WNhRcvCkca54T", // Updated agent ID
+        agentId: "BaJX191WNhRcvCkca54T",
         overrides: {
           agent: {
             prompt: {
@@ -113,7 +106,7 @@ export const usePatientIntake = () => {
         description: "Failed to connect to voice assistant. Please try again.",
       });
     }
-  }, [conversation, toast, apiKey]);
+  }, [conversation, toast]);
 
   const endSession = useCallback(() => {
     if (conversation.status === 'connected') {
@@ -136,7 +129,5 @@ export const usePatientIntake = () => {
     isConnected: conversation.status === 'connected',
     startConversation,
     endSession,
-    setElevenLabsApiKey,
-    apiKey,
   };
 };
