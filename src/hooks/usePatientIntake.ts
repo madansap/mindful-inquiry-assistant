@@ -37,17 +37,19 @@ export const usePatientIntake = () => {
         description: "Voice assistant session ended",
       });
     },
-    onMessage: (message: { source: Role; text: string }) => {
-      if (message.source === 'user' || message.source === 'ai') {
+    // Fix #1: Update the onMessage handler to match the expected type
+    onMessage: (props: { message: string; source: Role }) => {
+      if (props.source === 'user' || props.source === 'ai') {
         const newMessage: Message = {
           id: Date.now().toString(),
-          sender: message.source === 'user' ? 'user' : 'assistant',
-          text: message.text,
+          sender: props.source === 'user' ? 'user' : 'assistant',
+          // Fix #2: Use props.message instead of message.text
+          text: props.message,
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
         
-        if (message.source === 'ai') {
+        if (props.source === 'ai') {
           setIsTyping(false);
         }
       }
@@ -104,8 +106,8 @@ export const usePatientIntake = () => {
       setMessages(prev => [...prev, userMessage]);
       
       try {
-        // Use conversation.send with text
-        await conversation.send(text);
+        // Fix #3: Use the correct method to send a message
+        await conversation.sendMessage(text);
         setIsTyping(true);
       } catch (error) {
         console.error('Error sending message:', error);
