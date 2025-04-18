@@ -38,10 +38,21 @@ export const usePatientIntake = () => {
     },
     onMessage: (message) => {
       if (message.source === 'user' || message.source === 'ai') {
+        // Handle the message format properly based on the API structure
+        let messageText = '';
+        if (typeof message === 'object' && message !== null) {
+          // Extract message text based on the actual structure
+          if ('data' in message && message.data && typeof message.data === 'object' && 'message' in message.data) {
+            messageText = message.data.message as string;
+          } else if ('message' in message && typeof message.message === 'string') {
+            messageText = message.message;
+          }
+        }
+
         const newMessage: Message = {
           id: Date.now().toString(),
           sender: message.source === 'user' ? 'user' : 'assistant',
-          text: message.data?.message || '', // Access message via data.message
+          text: messageText,
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
@@ -103,7 +114,7 @@ export const usePatientIntake = () => {
       };
       setMessages(prev => [...prev, userMessage]);
       
-      // Send user message to ElevenLabs
+      // Send user message to ElevenLabs using the correct message structure
       await conversation.send({
         type: "UserMessage",
         data: {
