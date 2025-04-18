@@ -3,6 +3,7 @@ import { User, Bot, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
 import type { Message } from '@/hooks/usePatientIntake';
+import { useEffect, useRef } from 'react';
 
 interface ConversationScreenProps {
   messages: Message[];
@@ -27,6 +28,15 @@ export const ConversationScreen = ({
   onRecordingStop,
   isRecording,
 }: ConversationScreenProps) => {
+  const messageContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop = messageContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
     <div className="max-w-2xl mx-auto w-full">
       <div className="mb-4 flex items-center justify-between">
@@ -46,7 +56,10 @@ export const ConversationScreen = ({
         </Button>
       </div>
       
-      <div className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4 message-container">
+      <div 
+        ref={messageContainerRef}
+        className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4 message-container"
+      >
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -95,15 +108,24 @@ export const ConversationScreen = ({
         </div>
       </div>
       
-      <div className="flex justify-center items-center space-x-4">
-        <Button 
-          variant={isRecording ? "destructive" : "default"} 
-          onClick={isRecording ? onRecordingStop : onRecordingStart}
-        >
-          {isRecording ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
-          {isRecording ? "Stop Recording" : "Start Recording"}
-        </Button>
+      <div className="flex flex-col items-center space-y-4">
         <VoiceVisualizer isActive={isListening || isSpeaking} isListening={isListening} />
+        <div className="flex justify-center items-center space-x-4">
+          <Button 
+            variant={isRecording ? "destructive" : "default"} 
+            onClick={isRecording ? onRecordingStop : onRecordingStart}
+            className="text-white"
+            disabled={isSpeaking}
+          >
+            {isRecording ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
+            {isRecording ? "Stop Recording" : "Start Recording"}
+          </Button>
+        </div>
+        <div className="text-sm text-gray-500 text-center">
+          {isListening ? "I'm listening. Speak now..." : 
+           isSpeaking ? "I'm speaking..." : 
+           "Click the button and start speaking when ready"}
+        </div>
       </div>
     </div>
   );

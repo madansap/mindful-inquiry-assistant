@@ -25,7 +25,9 @@ export const usePatientIntake = () => {
     onConnect: () => console.log("Connected to ElevenLabs"),
     onDisconnect: () => console.log("Disconnected from ElevenLabs"),
     onMessage: (message) => {
-      // Fix type comparison - check the correct source values
+      // Handle incoming messages from ElevenLabs
+      console.log("Received message:", message);
+      
       if (message.source === 'user' || message.source === 'ai') {
         const newMessage: Message = {
           id: Date.now().toString(),
@@ -78,12 +80,26 @@ export const usePatientIntake = () => {
   };
 
   const handleRecordingComplete = (text: string) => {
-    // Fix: Use the correct method to send messages based on the library's API
+    // Handle the transcribed speech and send it to ElevenLabs
+    console.log("Sending message to ElevenLabs:", text);
+    
     if (conversation && conversation.status === 'connected') {
-      // Use the correct method from the API to send messages
-      // Since sendMessage doesn't exist, we'll need to use the appropriate method
-      // from the ElevenLabs conversation API
-      conversation.sendUserMessage({ message: text });
+      // Add the user message to our local state
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        sender: 'user',
+        text: text,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+      
+      // Send text to ElevenLabs using the correct method
+      conversation.send({
+        type: "UserMessage",
+        data: {
+          message: text
+        }
+      });
     } else {
       console.error('Cannot send message: Conversation not connected');
       toast({
