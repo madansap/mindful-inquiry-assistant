@@ -1,5 +1,5 @@
 
-import { User, Bot, Mic, MicOff } from 'lucide-react';
+import { User, Bot, Mic, MicOff, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
 import type { Message } from '@/hooks/usePatientIntake';
@@ -10,7 +10,6 @@ interface ConversationScreenProps {
   isListening: boolean;
   isSpeaking: boolean;
   isTyping: boolean;
-  currentUserMessage: string;
   onEndSession: () => void;
   onRecordingStart: () => void;
   onRecordingStop: () => void;
@@ -22,7 +21,6 @@ export const ConversationScreen = ({
   isListening,
   isSpeaking,
   isTyping,
-  currentUserMessage,
   onEndSession,
   onRecordingStart,
   onRecordingStop,
@@ -35,7 +33,7 @@ export const ConversationScreen = ({
     if (messageContainerRef.current) {
       messageContainerRef.current.scrollTop = messageContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isTyping]);
 
   return (
     <div className="max-w-2xl mx-auto w-full">
@@ -60,6 +58,16 @@ export const ConversationScreen = ({
         ref={messageContainerRef}
         className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4 space-y-4"
       >
+        {messages.length === 0 && !isTyping && (
+          <div className="flex justify-center items-center h-full">
+            <div className="text-center text-gray-400">
+              <Bot className="mx-auto h-12 w-12 mb-2" />
+              <p>The assistant will start talking shortly</p>
+              <p className="text-sm">Please wait...</p>
+            </div>
+          </div>
+        )}
+
         {messages.map((message) => (
           <div
             key={message.id}
@@ -100,14 +108,14 @@ export const ConversationScreen = ({
                 <Bot className="h-4 w-4 mr-1" />
                 <span className="text-xs font-medium">Assistant</span>
               </div>
-              <p className="text-sm typing-dots">Thinking</p>
+              <p className="text-sm typing-dots">Thinking...</p>
             </div>
           </div>
         )}
       </div>
       
       <div className="flex flex-col items-center space-y-4">
-        <VoiceVisualizer isActive={isListening || isSpeaking} isListening={isListening} />
+        <VoiceVisualizer isActive={isListening || isSpeaking || isRecording} isListening={isListening || isRecording} />
         <div className="flex justify-center items-center space-x-4">
           <Button 
             variant={isRecording ? "destructive" : "default"} 
@@ -122,10 +130,10 @@ export const ConversationScreen = ({
         <div className="text-sm text-gray-500 text-center">
           {isListening ? "I'm listening. Speak now..." : 
            isSpeaking ? "I'm speaking..." : 
+           isRecording ? "Recording your voice..." :
            "Click the button and start speaking when ready"}
         </div>
       </div>
     </div>
   );
 };
-

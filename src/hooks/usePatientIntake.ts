@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useConversation } from '@11labs/react';
 import { useToast } from '@/components/ui/use-toast';
 import type { Role } from '@11labs/react';
@@ -18,8 +18,8 @@ export const usePatientIntake = () => {
   const [microphoneAccess, setMicrophoneAccess] = useState(false);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentUserMessage, setCurrentUserMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionActive, setSessionActive] = useState(false);
 
   // Initialize ElevenLabs conversation with proper handlers
   const conversation = useConversation({
@@ -29,24 +29,29 @@ export const usePatientIntake = () => {
         title: "Connected",
         description: "Voice assistant is ready",
       });
+      setSessionActive(true);
     },
     onDisconnect: () => {
       console.log("Disconnected from ElevenLabs");
-      toast({
-        title: "Disconnected",
-        description: "Voice assistant session ended",
-      });
+      if (sessionActive) {
+        toast({
+          title: "Disconnected",
+          description: "Voice assistant session ended",
+        });
+      }
+      setSessionActive(false);
     },
-    // Fix #1: Update the onMessage handler to match the expected type
     onMessage: (props: { message: string; source: Role }) => {
+      console.log("Message received:", props);
       if (props.source === 'user' || props.source === 'ai') {
         const newMessage: Message = {
           id: Date.now().toString(),
           sender: props.source === 'user' ? 'user' : 'assistant',
-          // Fix #2: Use props.message instead of message.text
           text: props.message,
           timestamp: new Date(),
         };
+        
+        console.log("Adding message to state:", newMessage);
         setMessages(prev => [...prev, newMessage]);
         
         if (props.source === 'ai') {
@@ -59,7 +64,7 @@ export const usePatientIntake = () => {
       toast({
         variant: "destructive",
         title: "Conversation Error",
-        description: error.message,
+        description: error.message || "An error occurred with the voice assistant",
       });
     },
   });
@@ -68,27 +73,49 @@ export const usePatientIntake = () => {
   const isListening = conversation.status === 'connected' && !conversation.isSpeaking;
   const isSpeaking = conversation.isSpeaking;
 
+  // Initialize conversation session with ElevenLabs
+  const startConversationSession = useCallback(async () => {
+    if (conversation.status !== 'connected') {
+      try {
+        console.log("Starting ElevenLabs session with agent ID: BUOFhT6jt80PMXtIH5Wc");
+        
+        await conversation.startSession({
+          agentId: "BUOFhT6jt80PMXtIH5Wc",
+          overrides: {
+            agent: {
+              prompt: {
+                prompt: "You are a friendly medical intake assistant. Your goal is to gather information about the patient's condition in a conversational way. Start by asking how they've been feeling lately.",
+              },
+              firstMessage: "Hello! I'm here to help gather some information about your health. How have you been feeling lately?",
+              language: "en",
+            },
+          },
+        });
+        
+        console.log("Session started successfully");
+        setStep('conversation');
+      } catch (error) {
+        console.error('Failed to start session:', error);
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: "Failed to connect to voice assistant. Please try again.",
+        });
+        setErrorDialogOpen(true);
+      }
+    } else {
+      console.log("Session already active");
+    }
+  }, [conversation, toast]);
+
   const requestMicrophoneAccess = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop()); // Release immediately after permission
       setMicrophoneAccess(true);
       
-      // Initialize conversation with ElevenLabs using the new agent ID
-      await conversation.startSession({
-        agentId: "BUOFhT6jt80PMXtIH5Wc",
-        overrides: {
-          agent: {
-            prompt: {
-              prompt: "You are a friendly medical intake assistant. Your goal is to gather information about the patient's condition in a conversational way. Start by asking how they've been feeling lately.",
-            },
-            firstMessage: "Hello! I'm here to help gather some information about your health. How have you been feeling lately?",
-            language: "en",
-          },
-        },
-      });
-      
-      setStep('conversation');
+      // Initialize conversation with ElevenLabs
+      await startConversationSession();
     } catch (error) {
       console.error('Error accessing microphone:', error);
       setErrorDialogOpen(true);
@@ -96,6 +123,13 @@ export const usePatientIntake = () => {
   };
 
   const handleRecordingComplete = async (text: string) => {
+    if (!text.trim()) {
+      console.log("Empty recording, ignoring");
+      return;
+    }
+    
+    console.log("Recording complete, sending message:", text);
+    
     if (conversation.status === 'connected') {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -103,14 +137,16 @@ export const usePatientIntake = () => {
         text: text,
         timestamp: new Date(),
       };
+      
       setMessages(prev => [...prev, userMessage]);
+      setIsTyping(true);
       
       try {
-        // Fix #3: Use the correct method to send a message
+        console.log("Sending message to ElevenLabs");
         await conversation.sendMessage(text);
-        setIsTyping(true);
       } catch (error) {
         console.error('Error sending message:', error);
+        setIsTyping(false);
         toast({
           variant: "destructive",
           title: "Error",
@@ -128,17 +164,27 @@ export const usePatientIntake = () => {
   };
 
   const handleRecordingError = (error: Error) => {
+    console.error("Recording error:", error);
     toast({
       variant: "destructive",
       title: "Recording Error",
-      description: error.message,
+      description: error.message || "Failed to record audio",
     });
   };
+
+  const endSession = useCallback(() => {
+    if (conversation.status === 'connected') {
+      console.log("Ending session");
+      conversation.endSession();
+    }
+    setStep('completed');
+  }, [conversation]);
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
       if (conversation.status === 'connected') {
+        console.log("Cleaning up: ending session on unmount");
         conversation.endSession();
       }
     };
@@ -152,7 +198,6 @@ export const usePatientIntake = () => {
     isListening,
     isSpeaking,
     messages,
-    currentUserMessage,
     isTyping,
     errorDialogOpen,
     setErrorDialogOpen,
@@ -160,5 +205,6 @@ export const usePatientIntake = () => {
     requestMicrophoneAccess,
     handleRecordingComplete,
     handleRecordingError,
+    endSession,
   };
 };

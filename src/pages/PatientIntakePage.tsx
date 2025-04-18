@@ -1,3 +1,4 @@
+
 import { useParams } from 'react-router-dom';
 import {
   Dialog,
@@ -26,14 +27,14 @@ const PatientIntakePage = () => {
     isListening,
     isSpeaking,
     messages,
-    currentUserMessage,
     isTyping,
     errorDialogOpen,
     setErrorDialogOpen,
     microphoneAccess,
     requestMicrophoneAccess,
     handleRecordingComplete,
-    handleRecordingError
+    handleRecordingError,
+    endSession,
   } = usePatientIntake();
 
   const { 
@@ -64,7 +65,6 @@ const PatientIntakePage = () => {
             isListening={isListening}
             isSpeaking={isSpeaking}
             isTyping={isTyping}
-            currentUserMessage={currentUserMessage}
             onEndSession={() => setErrorDialogOpen(true)}
             onRecordingStart={startRecording}
             onRecordingStop={stopRecording}
@@ -97,9 +97,14 @@ const PatientIntakePage = () => {
             </Button>
             <Button 
               variant="destructive" 
-              onClick={() => window.location.href = "/"}
+              onClick={() => {
+                endSession();
+                if (step !== 'completed') {
+                  window.location.href = "/";
+                }
+              }}
             >
-              Exit Assessment
+              {step !== 'completed' ? "Exit Assessment" : "Finish"}
             </Button>
           </DialogFooter>
         </DialogContent>
