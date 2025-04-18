@@ -20,14 +20,23 @@ export const usePatientIntake = () => {
   const [currentUserMessage, setCurrentUserMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  // Initialize ElevenLabs conversation
+  // Initialize ElevenLabs conversation with proper handlers
   const conversation = useConversation({
-    onConnect: () => console.log("Connected to ElevenLabs"),
-    onDisconnect: () => console.log("Disconnected from ElevenLabs"),
+    onConnect: () => {
+      console.log("Connected to ElevenLabs");
+      toast({
+        title: "Connected",
+        description: "Voice assistant is ready",
+      });
+    },
+    onDisconnect: () => {
+      console.log("Disconnected from ElevenLabs");
+      toast({
+        title: "Disconnected",
+        description: "Voice assistant session ended",
+      });
+    },
     onMessage: (message) => {
-      // Handle incoming messages from ElevenLabs
-      console.log("Received message:", message);
-      
       if (message.source === 'user' || message.source === 'ai') {
         const newMessage: Message = {
           id: Date.now().toString(),
@@ -36,6 +45,10 @@ export const usePatientIntake = () => {
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
+        
+        if (message.source === 'ai') {
+          setIsTyping(false);
+        }
       }
     },
     onError: (error) => {
@@ -43,7 +56,7 @@ export const usePatientIntake = () => {
       toast({
         variant: "destructive",
         title: "Conversation Error",
-        description: error,
+        description: error.message,
       });
     },
   });
@@ -58,9 +71,9 @@ export const usePatientIntake = () => {
       stream.getTracks().forEach(track => track.stop()); // Release immediately after permission
       setMicrophoneAccess(true);
       
-      // Start conversation with ElevenLabs
+      // Initialize conversation with ElevenLabs
       await conversation.startSession({
-        agentId: "yOouXRA03A0kIaUUoxV5", // Agent ID provided by the user
+        agentId: "yOouXRA03A0kIaUUoxV5",
         overrides: {
           agent: {
             prompt: {
@@ -79,12 +92,9 @@ export const usePatientIntake = () => {
     }
   };
 
-  const handleRecordingComplete = (text: string) => {
-    // Handle the transcribed speech and send it to ElevenLabs
-    console.log("Sending message to ElevenLabs:", text);
-    
-    if (conversation && conversation.status === 'connected') {
-      // Add the user message to our local state
+  const handleRecordingComplete = async (text: string) => {
+    // Only send message if conversation is connected
+    if (conversation.status === 'connected') {
       const userMessage: Message = {
         id: Date.now().toString(),
         sender: 'user',
@@ -93,13 +103,14 @@ export const usePatientIntake = () => {
       };
       setMessages(prev => [...prev, userMessage]);
       
-      // Send text to ElevenLabs using the correct method
-      conversation.send({
+      // Send user message to ElevenLabs
+      await conversation.send({
         type: "UserMessage",
         data: {
           message: text
         }
       });
+      setIsTyping(true);
     } else {
       console.error('Cannot send message: Conversation not connected');
       toast({
@@ -121,7 +132,9 @@ export const usePatientIntake = () => {
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      conversation.endSession();
+      if (conversation.status === 'connected') {
+        conversation.endSession();
+      }
     };
   }, [conversation]);
 
@@ -143,3 +156,4 @@ export const usePatientIntake = () => {
     handleRecordingError,
   };
 };
+

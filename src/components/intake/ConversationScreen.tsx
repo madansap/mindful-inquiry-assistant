@@ -58,54 +58,52 @@ export const ConversationScreen = ({
       
       <div 
         ref={messageContainerRef}
-        className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4 message-container"
+        className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4 space-y-4"
       >
-        <div className="space-y-4">
-          {messages.map((message) => (
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.sender === 'assistant' ? 'justify-start' : 'justify-end'}`}
+          >
             <div
-              key={message.id}
-              className={`flex ${message.sender === 'assistant' ? 'justify-start' : 'justify-end'}`}
+              className={`max-w-[80%] rounded-lg p-3 ${
+                message.sender === 'assistant'
+                  ? 'bg-secondary/20 text-secondary-foreground'
+                  : 'bg-primary text-primary-foreground'
+              }`}
             >
-              <div
-                className={`max-w-[80%] rounded-lg p-3 ${
-                  message.sender === 'assistant'
-                    ? 'bg-secondary/20 text-secondary-foreground'
-                    : 'bg-mindful-primary text-white'
-                }`}
-              >
-                <div className="flex items-center mb-1">
-                  {message.sender === 'assistant' ? (
-                    <>
-                      <Bot className="h-4 w-4 mr-1" />
-                      <span className="text-xs font-medium">Assistant</span>
-                    </>
-                  ) : (
-                    <>
-                      <User className="h-4 w-4 mr-1" />
-                      <span className="text-xs font-medium">You</span>
-                    </>
-                  )}
-                </div>
-                <p className="text-sm">{message.text}</p>
-                <div className="text-xs opacity-70 text-right mt-1">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
+              <div className="flex items-center mb-1">
+                {message.sender === 'assistant' ? (
+                  <>
+                    <Bot className="h-4 w-4 mr-1" />
+                    <span className="text-xs font-medium">Assistant</span>
+                  </>
+                ) : (
+                  <>
+                    <User className="h-4 w-4 mr-1" />
+                    <span className="text-xs font-medium">You</span>
+                  </>
+                )}
+              </div>
+              <p className="text-sm">{message.text}</p>
+              <div className="text-xs opacity-70 text-right mt-1">
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
-          ))}
-          
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg p-3 bg-secondary/20 text-secondary-foreground">
-                <div className="flex items-center mb-1">
-                  <Bot className="h-4 w-4 mr-1" />
-                  <span className="text-xs font-medium">Assistant</span>
-                </div>
-                <p className="text-sm typing-dots">Thinking</p>
+          </div>
+        ))}
+        
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-lg p-3 bg-secondary/20 text-secondary-foreground">
+              <div className="flex items-center mb-1">
+                <Bot className="h-4 w-4 mr-1" />
+                <span className="text-xs font-medium">Assistant</span>
               </div>
+              <p className="text-sm typing-dots">Thinking</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       
       <div className="flex flex-col items-center space-y-4">
@@ -130,3 +128,4 @@ export const ConversationScreen = ({
     </div>
   );
 };
+
