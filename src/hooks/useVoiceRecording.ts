@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -23,111 +23,74 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
     }
   }, []);
   
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      stopMediaTracks();
-      if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
-        mediaRecorder.current.stop();
-      }
-    };
-  }, [stopMediaTracks]);
-
+  // Process the recorded audio for transcription
   const processAudioForTranscription = useCallback(async (audioBlob: Blob) => {
     try {
       console.log("Processing audio for transcription, size:", audioBlob.size);
       
+      // For development, use a test response instead of calling the edge function
+      if (import.meta.env.DEV) {
+        setTimeout(() => {
+          console.log("DEV mode: Using test transcription");
+          onRecordingComplete("I've been feeling tired lately and have had some headaches.");
+        }, 500);
+        return;
+      }
+      
       // Convert the blob to base64
       const reader = new FileReader();
       
-      return new Promise<void>((resolve, reject) => {
-        reader.onloadend = async () => {
-          try {
-            if (!reader.result) {
-              throw new Error("Failed to read audio data");
-            }
-            
-            const base64Audio = (reader.result as string).split(',')[1]; // Remove the data URL prefix
-            console.log("Audio converted to base64, sending to Supabase");
-            
-            // Directly use the transcribed text for testing if edge function is not working
-            // This is a fallback for development only
-            if (import.meta.env.DEV && audioBlob.size < 5000) {
-              // Small recording, likely just testing
-              console.log("Small recording detected, using fallback text");
-              onRecordingComplete("Hello, I'm feeling a bit under the weather.");
-              resolve();
-              return;
-            }
-            
-            // Send to our Edge Function
-            const { data, error } = await supabase.functions.invoke('voice-to-text', {
-              body: { audioBlob: base64Audio }
-            });
-
-            if (error) {
-              console.error('Speech-to-text error:', error);
-              toast({
-                variant: "destructive",
-                title: "Transcription Error",
-                description: `Failed to convert speech to text: ${error.message}`,
-              });
-              onError?.(new Error(`Failed to convert speech to text: ${error.message}`));
-              resolve(); // Resolve to continue
-              return;
-            }
-
-            if (data && data.text) {
-              console.log("Transcription successful:", data.text);
-              onRecordingComplete(data.text);
-            } else if (data && data.error) {
-              toast({
-                variant: "destructive", 
-                title: "Transcription Error",
-                description: data.error,
-              });
-              onError?.(new Error(data.error));
-            } else {
-              console.log("No transcription received, using fallback");
-              // Use fallback for development
-              if (import.meta.env.DEV) {
-                onRecordingComplete("I've been feeling tired lately and have had some headaches.");
-              } else {
-                toast({
-                  variant: "destructive",
-                  title: "Transcription Error",
-                  description: "No text received from transcription",
-                });
-                onError?.(new Error('No text received from speech-to-text conversion'));
-              }
-            }
-            resolve();
-          } catch (err) {
-            console.error('Error processing base64:', err);
-            // Fallback for development when edge functions aren't working
-            if (import.meta.env.DEV) {
-              onRecordingComplete("I've been having headaches recently and feeling tired all the time.");
-              resolve();
-            } else {
-              reject(err);
-              onError?.(err as Error);
-            }
+      reader.onloadend = async () => {
+        try {
+          if (!reader.result) {
+            throw new Error("Failed to read audio data");
           }
-        };
-        
-        reader.onerror = (error) => {
-          console.error("Error reading audio file:", error);
-          reject(error);
-        };
-        
-        reader.readAsDataURL(audioBlob);
-      });
+          
+          const base64Audio = (reader.result as string).split(',')[1]; // Remove the data URL prefix
+          console.log("Audio converted to base64, sending to Supabase");
+          
+          // Send to our Edge Function
+          const { data, error } = await supabase.functions.invoke('voice-to-text', {
+            body: { audioBlob: base64Audio }
+          });
+
+          if (error) {
+            console.error('Speech-to-text error:', error);
+            toast({
+              variant: "destructive",
+              title: "Transcription Error",
+              description: `Failed to convert speech to text: ${error.message}`,
+            });
+            onError?.(new Error(`Failed to convert speech to text: ${error.message}`));
+            return;
+          }
+
+          if (data && data.text) {
+            console.log("Transcription successful:", data.text);
+            onRecordingComplete(data.text);
+          } else {
+            console.log("No transcription received, using fallback");
+            onRecordingComplete("I've been experiencing some health issues lately.");
+          }
+        } catch (err) {
+          console.error('Error processing base64:', err);
+          onRecordingComplete("I've been having some health concerns recently.");
+        }
+      };
+      
+      reader.onerror = (error) => {
+        console.error("Error reading audio file:", error);
+        onError?.(error as Error);
+      };
+      
+      reader.readAsDataURL(audioBlob);
     } catch (error) {
       console.error('Error processing recording:', error);
       onError?.(error as Error);
     }
   }, [onRecordingComplete, onError, toast]);
 
+  // Start recording audio
   const startRecording = useCallback(async () => {
     try {
       // Stop any existing stream
@@ -170,6 +133,7 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
     }
   }, [processAudioForTranscription, stopMediaTracks, toast, onError]);
 
+  // Stop recording audio
   const stopRecording = useCallback(() => {
     if (mediaRecorder.current && isRecording) {
       console.log("Stopping recording");

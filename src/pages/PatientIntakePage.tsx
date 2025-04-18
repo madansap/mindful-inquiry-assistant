@@ -16,6 +16,7 @@ import { CompletedScreen } from '@/components/intake/CompletedScreen';
 import { IntakeHeader } from '@/components/intake/IntakeHeader';
 import { usePatientIntake } from '@/hooks/usePatientIntake';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { useEffect } from 'react';
 
 const PatientIntakePage = () => {
   const { intakeId } = useParams<{ intakeId: string }>();
@@ -45,6 +46,11 @@ const PatientIntakePage = () => {
     onRecordingComplete: handleRecordingComplete,
     onError: handleRecordingError
   });
+  
+  // Log important state changes to help with debugging
+  useEffect(() => {
+    console.log(`State update - step: ${step}, isListening: ${isListening}, isSpeaking: ${isSpeaking}, isRecording: ${isRecording}`);
+  }, [step, isListening, isSpeaking, isRecording]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

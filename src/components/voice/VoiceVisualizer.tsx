@@ -32,15 +32,17 @@ const VoiceVisualizer = ({ isActive, isListening = false }: VoiceVisualizerProps
   }, [isActive, isListening]);
 
   return (
-    <div className="voice-wave-container">
+    <div className="voice-wave-container flex items-center justify-center gap-1 h-12">
       {amplitudes.map((amplitude, index) => (
         <div
           key={index}
-          className={`voice-wave-bar ${isActive ? `animate-wave-${index + 1}` : ""}`}
+          className={`voice-wave-bar ${isActive ? "animate-pulse" : ""}`}
           style={{
             height: `${amplitude * 24}px`,
+            width: "4px",
             backgroundColor: isListening ? '#e9c46a' : '#2a9d8f',
             opacity: isActive ? 1 : 0.5,
+            borderRadius: "1px",
           }}
         />
       ))}

@@ -39,9 +39,9 @@ export const ConversationScreen = ({
     <div className="max-w-2xl mx-auto w-full">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center">
-          <div className={`w-3 h-3 rounded-full mr-2 ${isListening || isSpeaking ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+          <div className={`w-3 h-3 rounded-full mr-2 ${isListening || isSpeaking || isRecording ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
           <span className="text-sm font-medium">
-            {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : 'Ready'}
+            {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isRecording ? 'Recording...' : 'Ready'}
           </span>
         </div>
         

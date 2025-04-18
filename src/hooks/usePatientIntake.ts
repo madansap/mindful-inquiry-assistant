@@ -1,8 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useConversation } from '@11labs/react';
+import { useConversation, Role } from '@11labs/react';
 import { useToast } from '@/components/ui/use-toast';
-import type { Role } from '@11labs/react';
 
 export interface Message {
   id: string;
@@ -41,7 +40,7 @@ export const usePatientIntake = () => {
       }
       setSessionActive(false);
     },
-    onMessage: (props: { message: string; source: Role }) => {
+    onMessage: (props) => {
       console.log("Message received:", props);
       if (props.source === 'user' || props.source === 'ai') {
         const newMessage: Message = {
@@ -143,6 +142,7 @@ export const usePatientIntake = () => {
       
       try {
         console.log("Sending message to ElevenLabs");
+        // Use the correct method name from the ElevenLabs API
         await conversation.sendMessage(text);
       } catch (error) {
         console.error('Error sending message:', error);
