@@ -47,7 +47,7 @@ const SignupPage = () => {
       await signup(data.email, data.password, data.fullName);
       toast({
         title: "Registration successful",
-        description: "Welcome to Mindful Inquiry Assistant",
+        description: "Welcome to the application",
       });
       navigate("/dashboard");
     } catch (error: any) {
@@ -64,7 +64,7 @@ const SignupPage = () => {
   return (
     <AuthLayout 
       title="Create an account" 
-      subtitle="Sign up to get started with Mindful Inquiry Assistant"
+      subtitle="Sign up to get started"
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -88,7 +88,7 @@ const SignupPage = () => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="doctor@example.com" {...field} />
+                  <Input placeholder="john@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -107,7 +107,7 @@ const SignupPage = () => {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full bg-mindful-primary hover:bg-mindful-primary/90" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creating account..." : "Create account"}
           </Button>
         </form>
@@ -115,7 +115,7 @@ const SignupPage = () => {
       
       <div className="mt-6 text-center text-sm text-muted-foreground">
         <div className="mb-2">
-          <a href="/login" className="text-mindful-secondary hover:underline">
+          <a href="/login" className="hover:underline">
             Already have an account? Sign in
           </a>
         </div>
@@ -125,4 +125,3 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
-
