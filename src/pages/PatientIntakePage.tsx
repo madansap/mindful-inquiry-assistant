@@ -1,4 +1,3 @@
-
 import { useParams } from 'react-router-dom';
 import {
   Dialog,
@@ -15,6 +14,7 @@ import { ConversationScreen } from '@/components/intake/ConversationScreen';
 import { CompletedScreen } from '@/components/intake/CompletedScreen';
 import { IntakeHeader } from '@/components/intake/IntakeHeader';
 import { usePatientIntake } from '@/hooks/usePatientIntake';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
 const PatientIntakePage = () => {
   const { intakeId } = useParams<{ intakeId: string }>();
@@ -35,6 +35,15 @@ const PatientIntakePage = () => {
     handleRecordingComplete,
     handleRecordingError
   } = usePatientIntake();
+
+  const { 
+    isRecording, 
+    startRecording, 
+    stopRecording 
+  } = useVoiceRecording({
+    onRecordingComplete: handleRecordingComplete,
+    onError: handleRecordingError
+  });
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -57,8 +66,9 @@ const PatientIntakePage = () => {
             isTyping={isTyping}
             currentUserMessage={currentUserMessage}
             onEndSession={() => setErrorDialogOpen(true)}
-            onRecordingComplete={handleRecordingComplete}
-            onRecordingError={handleRecordingError}
+            onRecordingStart={startRecording}
+            onRecordingStop={stopRecording}
+            isRecording={isRecording}
           />
         )}
         {step === 'completed' && <CompletedScreen />}

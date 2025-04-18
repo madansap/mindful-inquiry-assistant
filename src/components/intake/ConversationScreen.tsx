@@ -1,5 +1,5 @@
 
-import { User, Bot } from 'lucide-react';
+import { User, Bot, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
 import type { Message } from '@/hooks/usePatientIntake';
@@ -11,6 +11,9 @@ interface ConversationScreenProps {
   isTyping: boolean;
   currentUserMessage: string;
   onEndSession: () => void;
+  onRecordingStart: () => void;
+  onRecordingStop: () => void;
+  isRecording: boolean;
 }
 
 export const ConversationScreen = ({
@@ -20,6 +23,9 @@ export const ConversationScreen = ({
   isTyping,
   currentUserMessage,
   onEndSession,
+  onRecordingStart,
+  onRecordingStop,
+  isRecording,
 }: ConversationScreenProps) => {
   return (
     <div className="max-w-2xl mx-auto w-full">
@@ -89,7 +95,14 @@ export const ConversationScreen = ({
         </div>
       </div>
       
-      <div className="flex justify-center">
+      <div className="flex justify-center items-center space-x-4">
+        <Button 
+          variant={isRecording ? "destructive" : "default"} 
+          onClick={isRecording ? onRecordingStop : onRecordingStart}
+        >
+          {isRecording ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
+          {isRecording ? "Stop Recording" : "Start Recording"}
+        </Button>
         <VoiceVisualizer isActive={isListening || isSpeaking} isListening={isListening} />
       </div>
     </div>

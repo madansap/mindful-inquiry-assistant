@@ -25,11 +25,11 @@ export const usePatientIntake = () => {
     onConnect: () => console.log("Connected to ElevenLabs"),
     onDisconnect: () => console.log("Disconnected from ElevenLabs"),
     onMessage: (message) => {
-      if (message.type === 'final_transcript' || message.type === 'agent_response') {
+      if (message.source === 'user' || message.source === 'agent') {
         const newMessage: Message = {
           id: Date.now().toString(),
-          sender: message.type === 'final_transcript' ? 'user' : 'assistant',
-          text: message.text,
+          sender: message.source === 'user' ? 'user' : 'assistant',
+          text: message.message,
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
@@ -40,7 +40,7 @@ export const usePatientIntake = () => {
       toast({
         variant: "destructive",
         title: "Conversation Error",
-        description: error.message,
+        description: error,
       });
     },
   });
@@ -57,7 +57,7 @@ export const usePatientIntake = () => {
       
       // Start conversation with ElevenLabs
       await conversation.startSession({
-        agentId: "your_agent_id", // Replace with your agent ID from ElevenLabs
+        agentId: "yOouXRA03A0kIaUUoxV5", // Agent ID provided by the user
         overrides: {
           agent: {
             prompt: {
@@ -76,12 +76,25 @@ export const usePatientIntake = () => {
     }
   };
 
+  const handleRecordingComplete = (text: string) => {
+    // Add user's transcribed message to conversation
+    conversation.sendMessage(text);
+  };
+
+  const handleRecordingError = (error: Error) => {
+    toast({
+      variant: "destructive",
+      title: "Recording Error",
+      description: error.message,
+    });
+  };
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
       conversation.endSession();
     };
-  }, []);
+  }, [conversation]);
 
   return {
     step,
@@ -97,5 +110,7 @@ export const usePatientIntake = () => {
     setErrorDialogOpen,
     microphoneAccess,
     requestMicrophoneAccess,
+    handleRecordingComplete,
+    handleRecordingError,
   };
 };
