@@ -48,11 +48,11 @@ const LoginPage = () => {
         description: "Welcome back to Mindful Inquiry Assistant",
       });
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "Invalid email or password. Please try again.",
+        description: error.message || "Invalid email or password. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -100,12 +100,10 @@ const LoginPage = () => {
       
       <div className="mt-6 text-center text-sm text-muted-foreground">
         <div className="mb-2">
-          <span className="text-mindful-secondary">Demo credentials:</span>
+          <a href="/signup" className="text-mindful-secondary hover:underline">
+            Don't have an account? Sign up
+          </a>
         </div>
-        <code className="p-2 bg-muted rounded block text-xs">
-          Email: doctor@example.com<br />
-          Password: password
-        </code>
       </div>
     </AuthLayout>
   );
