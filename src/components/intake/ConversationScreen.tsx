@@ -1,5 +1,5 @@
 
-import { User, Bot, Mic, MicOff, XCircle } from 'lucide-react';
+import { Bot, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
 import type { Message } from '@/hooks/usePatientIntake';
@@ -10,10 +10,9 @@ interface ConversationScreenProps {
   isListening: boolean;
   isSpeaking: boolean;
   isTyping: boolean;
+  isConnecting: boolean;
+  isConnected: boolean;
   onEndSession: () => void;
-  onRecordingStart: () => void;
-  onRecordingStop: () => void;
-  isRecording: boolean;
 }
 
 export const ConversationScreen = ({
@@ -21,10 +20,9 @@ export const ConversationScreen = ({
   isListening,
   isSpeaking,
   isTyping,
+  isConnecting,
+  isConnected,
   onEndSession,
-  onRecordingStart,
-  onRecordingStop,
-  isRecording,
 }: ConversationScreenProps) => {
   const messageContainerRef = useRef<HTMLDivElement>(null);
   
@@ -39,9 +37,13 @@ export const ConversationScreen = ({
     <div className="max-w-2xl mx-auto w-full">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center">
-          <div className={`w-3 h-3 rounded-full mr-2 ${isListening || isSpeaking || isRecording ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+          <div className={`w-3 h-3 rounded-full mr-2 ${isConnecting ? 'bg-yellow-500 animate-pulse' : isConnected ? 'bg-green-500' : 'bg-gray-300'}`}></div>
           <span className="text-sm font-medium">
-            {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isRecording ? 'Recording...' : 'Ready'}
+            {isConnecting ? 'Connecting...' : 
+             !isConnected ? 'Disconnected' :
+             isListening ? 'Listening...' : 
+             isSpeaking ? 'Speaking...' : 
+             'Ready'}
           </span>
         </div>
         
@@ -115,23 +117,13 @@ export const ConversationScreen = ({
       </div>
       
       <div className="flex flex-col items-center space-y-4">
-        <VoiceVisualizer isActive={isListening || isSpeaking || isRecording} isListening={isListening || isRecording} />
-        <div className="flex justify-center items-center space-x-4">
-          <Button 
-            variant={isRecording ? "destructive" : "default"} 
-            onClick={isRecording ? onRecordingStop : onRecordingStart}
-            className="text-white"
-            disabled={isSpeaking}
-          >
-            {isRecording ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
-            {isRecording ? "Stop Recording" : "Start Recording"}
-          </Button>
-        </div>
+        <VoiceVisualizer isActive={isConnected && (isListening || isSpeaking)} isListening={isListening} />
         <div className="text-sm text-gray-500 text-center">
-          {isListening ? "I'm listening. Speak now..." : 
+          {isConnecting ? "Connecting to voice assistant..." : 
+           !isConnected ? "Voice assistant disconnected" :
+           isListening ? "I'm listening. Speak now..." : 
            isSpeaking ? "I'm speaking..." : 
-           isRecording ? "Recording your voice..." :
-           "Click the button and start speaking when ready"}
+           "When you're ready to speak, just start talking"}
         </div>
       </div>
     </div>
