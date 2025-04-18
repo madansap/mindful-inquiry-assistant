@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -10,6 +10,9 @@ export interface Message {
   timestamp: Date;
 }
 
+// This should be stored securely in environment variables in a production app
+const ELEVEN_LABS_API_KEY = ''; // Add your API key here
+
 export const usePatientIntake = () => {
   const { toast } = useToast();
   const [step, setStep] = useState<'welcome' | 'consent' | 'conversation' | 'completed'>('welcome');
@@ -17,9 +20,11 @@ export const usePatientIntake = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
+  const [apiKey, setApiKey] = useState(ELEVEN_LABS_API_KEY);
 
   // Initialize ElevenLabs conversation
   const conversation = useConversation({
+    apiKey: apiKey, // Add API key here
     onConnect: () => {
       console.log("Connected to ElevenLabs");
       toast({
@@ -64,10 +69,26 @@ export const usePatientIntake = () => {
     },
   });
 
+  // Allow setting API key for testing purposes
+  const setElevenLabsApiKey = useCallback((key: string) => {
+    setApiKey(key);
+  }, []);
+
   // Start conversation session with ElevenLabs
   const startConversation = useCallback(async () => {
     try {
+      if (!apiKey) {
+        toast({
+          variant: "destructive",
+          title: "API Key Missing",
+          description: "Please provide your ElevenLabs API key to start the conversation.",
+        });
+        return;
+      }
+
       console.log("Starting ElevenLabs session");
+      setIsTyping(true);
+      
       await conversation.startSession({
         agentId: "BUOFhT6jt80PMXtIH5Wc",
         overrides: {
@@ -80,17 +101,19 @@ export const usePatientIntake = () => {
           },
         },
       });
+      
       console.log("Session started successfully");
       setStep('conversation');
     } catch (error) {
       console.error('Failed to start session:', error);
+      setIsTyping(false);
       toast({
         variant: "destructive",
         title: "Connection Error",
         description: "Failed to connect to voice assistant. Please try again.",
       });
     }
-  }, [conversation, toast]);
+  }, [conversation, toast, apiKey]);
 
   const endSession = useCallback(() => {
     if (conversation.status === 'connected') {
@@ -113,5 +136,7 @@ export const usePatientIntake = () => {
     isConnected: conversation.status === 'connected',
     startConversation,
     endSession,
+    setElevenLabsApiKey,
+    apiKey,
   };
 };

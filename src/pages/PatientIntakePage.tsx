@@ -16,10 +16,14 @@ import { CompletedScreen } from '@/components/intake/CompletedScreen';
 import { IntakeHeader } from '@/components/intake/IntakeHeader';
 import { usePatientIntake } from '@/hooks/usePatientIntake';
 import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const PatientIntakePage = () => {
   const { intakeId } = useParams<{ intakeId: string }>();
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState('');
   
   const {
     step,
@@ -34,7 +38,23 @@ const PatientIntakePage = () => {
     isTyping,
     startConversation,
     endSession,
+    setElevenLabsApiKey,
+    apiKey,
   } = usePatientIntake();
+
+  const handleStartConversation = () => {
+    if (!apiKey) {
+      setApiKeyDialogOpen(true);
+    } else {
+      startConversation();
+    }
+  };
+
+  const handleApiKeySubmit = () => {
+    setElevenLabsApiKey(tempApiKey);
+    setApiKeyDialogOpen(false);
+    startConversation();
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -46,7 +66,7 @@ const PatientIntakePage = () => {
           <ConsentScreen
             consentGiven={consentGiven}
             onConsentChange={setConsentGiven}
-            onContinue={startConversation}
+            onContinue={handleStartConversation}
           />
         )}
         {step === 'conversation' && (
@@ -89,6 +109,40 @@ const PatientIntakePage = () => {
               }}
             >
               End Session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ElevenLabs API Key Required</DialogTitle>
+            <DialogDescription>
+              To use the ElevenLabs voice assistant, please provide your API key. You can get one from the ElevenLabs dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="apiKey" className="text-right">
+                API Key
+              </Label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="Enter your ElevenLabs API key"
+                className="col-span-3"
+                value={tempApiKey}
+                onChange={(e) => setTempApiKey(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApiKeyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApiKeySubmit} disabled={!tempApiKey}>
+              Start Session
             </Button>
           </DialogFooter>
         </DialogContent>
