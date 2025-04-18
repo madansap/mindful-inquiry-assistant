@@ -1,8 +1,10 @@
+
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { User, Bot, XCircle, Mic, Volume2 } from 'lucide-react';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
 interface Message {
   id: string;

@@ -32,6 +32,8 @@ const PatientIntakePage = () => {
     setErrorDialogOpen,
     microphoneAccess,
     requestMicrophoneAccess,
+    handleRecordingComplete,
+    handleRecordingError
   } = usePatientIntake();
 
   return (
@@ -55,6 +57,8 @@ const PatientIntakePage = () => {
             isTyping={isTyping}
             currentUserMessage={currentUserMessage}
             onEndSession={() => setErrorDialogOpen(true)}
+            onRecordingComplete={handleRecordingComplete}
+            onRecordingError={handleRecordingError}
           />
         )}
         {step === 'completed' && <CompletedScreen />}
