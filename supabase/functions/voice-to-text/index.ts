@@ -18,28 +18,37 @@ serve(async (req) => {
       throw new Error('No audio data provided')
     }
 
+    // Get the API key from environment
+    const apiKey = Deno.env.get('ELEVEN_LABS_API_KEY')
+    if (!apiKey) {
+      throw new Error('Missing ElevenLabs API key')
+    }
+
     // Convert the audio to text using Eleven Labs API
     const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
-        'xi-api-key': Deno.env.get('ELEVEN_LABS_API_KEY') || '',
+        'xi-api-key': apiKey,
       },
-      body: audioBlob,
+      body: audioBlob, // The base64 data is already parsed into binary by the fetch API
     })
 
     if (!response.ok) {
       const error = await response.text()
+      console.error('ElevenLabs API error:', error)
       throw new Error(`Failed to convert speech to text: ${error}`)
     }
 
     const result = await response.json()
+    console.log('Speech to text result:', result)
     
     return new Response(
       JSON.stringify({ text: result.text }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    console.error('Voice-to-text error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

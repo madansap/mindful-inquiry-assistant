@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { User, Bot, XCircle, Mic, Volume2 } from 'lucide-react';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { useEffect } from 'react';
 
 interface Message {
   id: string;
@@ -38,6 +39,22 @@ export const ConversationScreen = ({
     onRecordingComplete,
     onError: onRecordingError,
   });
+
+  // Update the parent component's listening state when recording state changes
+  useEffect(() => {
+    if (isRecording !== isListening) {
+      // This effect is just to sync the states if needed
+      // The actual state management happens in the parent component
+    }
+  }, [isRecording, isListening]);
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -129,10 +146,14 @@ export const ConversationScreen = ({
       
       <div className="flex items-center justify-center gap-6">
         <div className="flex flex-col items-center">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isListening ? 'bg-mindful-accent' : 'bg-gray-200'}`}>
-            <Mic className={isListening ? 'text-mindful-secondary' : 'text-gray-400'} />
-          </div>
-          <VoiceVisualizer isActive={isListening} isListening={true} />
+          <Button
+            onClick={toggleRecording}
+            className={`w-12 h-12 rounded-full flex items-center justify-center ${isRecording ? 'bg-mindful-accent' : 'bg-gray-200'}`}
+            variant="ghost"
+          >
+            <Mic className={isRecording ? 'text-mindful-secondary' : 'text-gray-400'} />
+          </Button>
+          <VoiceVisualizer isActive={isRecording} isListening={true} />
         </div>
         
         <div className="flex flex-col items-center">

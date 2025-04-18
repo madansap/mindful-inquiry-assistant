@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseVoiceRecordingProps {
@@ -11,44 +11,62 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
       mediaRecorder.current = new MediaRecorder(stream);
       audioChunks.current = [];
 
       mediaRecorder.current.ondataavailable = (event) => {
-        audioChunks.current.push(event.data);
+        if (event.data.size > 0) {
+          audioChunks.current.push(event.data);
+        }
       };
 
       mediaRecorder.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
-        
         try {
-          // Convert the audio blob to base64
+          const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+          
+          // Convert the blob to base64
           const reader = new FileReader();
           reader.readAsDataURL(audioBlob);
+          
           reader.onloadend = async () => {
-            const base64Audio = reader.result as string;
-            const base64Data = base64Audio.split(',')[1]; // Remove the data URL prefix
-
+            const base64Audio = (reader.result as string).split(',')[1]; // Remove the data URL prefix
+            
             // Send to our Edge Function
             const { data, error } = await supabase.functions.invoke('voice-to-text', {
-              body: { audioBlob: base64Data }
+              body: { audioBlob: base64Audio }
             });
 
             if (error) {
-              onError?.(new Error('Failed to convert speech to text'));
+              console.error('Speech-to-text error:', error);
+              onError?.(new Error(`Failed to convert speech to text: ${error.message}`));
               return;
             }
 
-            onRecordingComplete(data.text);
+            if (data && data.text) {
+              onRecordingComplete(data.text);
+            } else {
+              onError?.(new Error('No text received from speech-to-text conversion'));
+            }
           };
         } catch (error) {
+          console.error('Error processing recording:', error);
           onError?.(error as Error);
-        } finally {
-          stream.getTracks().forEach(track => track.stop());
         }
       };
 
@@ -64,6 +82,11 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
     if (mediaRecorder.current && isRecording) {
       mediaRecorder.current.stop();
       setIsRecording(false);
+      
+      // Stop all tracks to release the microphone
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     }
   };
 

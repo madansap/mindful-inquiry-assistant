@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { textToSpeech, playAudio } from '@/services/voiceService';
 import { useToast } from '@/components/ui/use-toast';
@@ -20,6 +21,7 @@ export const usePatientIntake = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [microphoneAccess, setMicrophoneAccess] = useState(false);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [conversationEnded, setConversationEnded] = useState(false);
 
   const protocolQuestions = [
     "How have you been feeling lately?",
@@ -48,6 +50,11 @@ export const usePatientIntake = () => {
       });
     } finally {
       setIsSpeaking(false);
+      
+      // If this was the last question and we've finished speaking, move to completed
+      if (conversationEnded) {
+        setStep('completed');
+      }
     }
   };
 
@@ -65,9 +72,14 @@ export const usePatientIntake = () => {
       
       setMessages([initialMessage]);
       setStep('conversation');
-      handleAISpeak(initialMessage.text);
       
+      // Clean up the stream since we only needed it for permission
       stream.getTracks().forEach(track => track.stop());
+      
+      // Slight delay to make the UI transition feel more natural
+      setTimeout(() => {
+        handleAISpeak(initialMessage.text);
+      }, 500);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       setErrorDialogOpen(true);
@@ -76,7 +88,9 @@ export const usePatientIntake = () => {
 
   const handleRecordingComplete = async (text: string) => {
     if (!text) return;
-
+    setIsListening(false);
+    
+    // Update the current message with the transcribed text
     const userMessage: Message = {
       id: Date.now().toString(),
       sender: 'user',
@@ -85,21 +99,34 @@ export const usePatientIntake = () => {
     };
     
     setMessages(prev => [...prev, userMessage]);
+    setCurrentUserMessage('');
     setIsTyping(true);
     
+    // Simulate processing time for a more natural conversation flow
     setTimeout(() => {
       setIsTyping(false);
+      
+      const questionIndex = Math.floor(messages.length / 2);
+      let nextQuestion: string;
+      
+      // Check if we've reached the end of our questions
+      if (questionIndex >= protocolQuestions.length - 1) {
+        nextQuestion = "Thank you for sharing all of this information with me. I've gathered enough information to create a comprehensive report for your healthcare provider. The assessment is now complete.";
+        setConversationEnded(true); // Mark that we're at the end
+      } else {
+        nextQuestion = protocolQuestions[questionIndex + 1];
+      }
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'assistant',
-        text: getNextQuestion(messages.length),
+        text: nextQuestion,
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, assistantMessage]);
       handleAISpeak(assistantMessage.text);
-    }, 2000);
+    }, 1000);
   };
 
   const handleRecordingError = (error: Error) => {
@@ -110,33 +137,16 @@ export const usePatientIntake = () => {
     });
   };
 
-  const getNextQuestion = (messageCount: number) => {
-    const questionIndex = Math.floor(messageCount / 2);
-    
-    if (questionIndex >= protocolQuestions.length - 1) {
-      setTimeout(() => {
-        setStep('completed');
-      }, 5000);
-      
-      return "Thank you for sharing all of this information with me. I've gathered enough information to create a comprehensive report for your healthcare provider. The assessment is now complete.";
-    }
-    
-    return protocolQuestions[questionIndex + 1];
-  };
-
+  // Start listening whenever the assistant stops speaking (unless we're ending)
   useEffect(() => {
-    if (step === 'conversation' && !isSpeaking && !isListening && messages.length > 0) {
+    if (step === 'conversation' && !isSpeaking && !isListening && messages.length > 0 && !conversationEnded) {
       const lastMessage = messages[messages.length - 1];
       
       if (lastMessage.sender === 'assistant') {
-        const timer = setTimeout(() => {
-          handleAISpeak(lastMessage.text);
-        }, 1000);
-        
-        return () => clearTimeout(timer);
+        setIsListening(true);
       }
     }
-  }, [step, isSpeaking, isListening, messages]);
+  }, [step, isSpeaking, isListening, messages, conversationEnded]);
 
   return {
     step,

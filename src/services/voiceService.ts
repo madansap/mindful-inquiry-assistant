@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 interface VoiceConfig {
   voiceId: string;
   model: string;
@@ -11,28 +13,31 @@ export const defaultVoiceConfig: VoiceConfig = {
 
 export async function textToSpeech(text: string, config: VoiceConfig = defaultVoiceConfig) {
   try {
-    const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + config.voiceId, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'xi-api-key': import.meta.env.VITE_ELEVEN_LABS_API_KEY,
-      },
-      body: JSON.stringify({
+    const { data, error } = await supabase.functions.invoke('text-to-speech', {
+      body: {
         text,
-        model_id: config.model,
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
-        },
-      }),
+        voiceId: config.voiceId,
+        model: config.model
+      }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to convert text to speech: ${errorText}`);
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw new Error(`Failed to convert text to speech: ${error.message}`);
     }
 
-    const audioBlob = await response.blob();
+    if (!data.audio) {
+      throw new Error('No audio received from text-to-speech function');
+    }
+
+    // Convert base64 to Blob
+    const binaryStr = atob(data.audio);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+    
     return URL.createObjectURL(audioBlob);
   } catch (error) {
     console.error('Error in text to speech:', error);
