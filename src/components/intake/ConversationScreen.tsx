@@ -1,18 +1,8 @@
 
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { User, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { User, Bot, XCircle, Mic, Volume2 } from 'lucide-react';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
-import { useVoiceRecording } from '@/hooks/useVoiceRecording';
-import { useEffect } from 'react';
-
-interface Message {
-  id: string;
-  sender: 'user' | 'assistant';
-  text: string;
-  timestamp: Date;
-}
+import type { Message } from '@/hooks/usePatientIntake';
 
 interface ConversationScreenProps {
   messages: Message[];
@@ -21,8 +11,6 @@ interface ConversationScreenProps {
   isTyping: boolean;
   currentUserMessage: string;
   onEndSession: () => void;
-  onRecordingComplete: (text: string) => void;
-  onRecordingError: (error: Error) => void;
 }
 
 export const ConversationScreen = ({
@@ -32,33 +20,7 @@ export const ConversationScreen = ({
   isTyping,
   currentUserMessage,
   onEndSession,
-  onRecordingComplete,
-  onRecordingError,
 }: ConversationScreenProps) => {
-  const { isRecording, startRecording, stopRecording } = useVoiceRecording({
-    onRecordingComplete,
-    onError: onRecordingError,
-  });
-
-  // Sync recording state with parent's listening state
-  useEffect(() => {
-    if (isListening && !isRecording) {
-      console.log("Auto-starting recording");
-      startRecording();
-    } else if (!isListening && isRecording) {
-      console.log("Auto-stopping recording");
-      stopRecording();
-    }
-  }, [isListening, isRecording, startRecording, stopRecording]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    const messageContainer = document.querySelector('.message-container');
-    if (messageContainer) {
-      messageContainer.scrollTop = messageContainer.scrollHeight;
-    }
-  }, [messages]);
-
   return (
     <div className="max-w-2xl mx-auto w-full">
       <div className="mb-4 flex items-center justify-between">
@@ -69,21 +31,13 @@ export const ConversationScreen = ({
           </span>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Switch id="voice-mode" defaultChecked />
-            <Label htmlFor="voice-mode" className="text-sm">Voice Mode</Label>
-          </div>
-          
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={onEndSession}
-          >
-            <XCircle className="h-4 w-4 mr-1" />
-            End Session
-          </Button>
-        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={onEndSession}
+        >
+          End Session
+        </Button>
       </div>
       
       <div className="bg-white rounded-lg shadow-md h-[60vh] overflow-y-auto p-4 mb-4 message-container">
@@ -121,18 +75,6 @@ export const ConversationScreen = ({
             </div>
           ))}
           
-          {isListening && currentUserMessage && (
-            <div className="flex justify-end">
-              <div className="max-w-[80%] rounded-lg p-3 bg-mindful-primary/70 text-white">
-                <div className="flex items-center mb-1">
-                  <User className="h-4 w-4 mr-1" />
-                  <span className="text-xs font-medium">You</span>
-                </div>
-                <p className="text-sm">{currentUserMessage}</p>
-              </div>
-            </div>
-          )}
-          
           {isTyping && (
             <div className="flex justify-start">
               <div className="max-w-[80%] rounded-lg p-3 bg-secondary/20 text-secondary-foreground">
@@ -147,28 +89,8 @@ export const ConversationScreen = ({
         </div>
       </div>
       
-      <div className="flex items-center justify-center gap-6">
-        <div className="flex flex-col items-center">
-          <Button
-            onClick={() => isRecording ? stopRecording() : startRecording()}
-            className={`w-12 h-12 rounded-full flex items-center justify-center ${isRecording ? 'bg-mindful-accent' : 'bg-gray-200'}`}
-            variant="ghost"
-            type="button"
-            disabled={isSpeaking}
-          >
-            <Mic className={isRecording ? 'text-mindful-secondary animate-pulse' : 'text-gray-400'} />
-          </Button>
-          <VoiceVisualizer isActive={isRecording} isListening={true} />
-          <span className="text-xs mt-1">{isRecording ? 'Tap to stop' : 'Tap to speak'}</span>
-        </div>
-        
-        <div className="flex flex-col items-center">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isSpeaking ? 'bg-mindful-primary' : 'bg-gray-200'}`}>
-            <Volume2 className={isSpeaking ? 'text-white' : 'text-gray-400'} />
-          </div>
-          <VoiceVisualizer isActive={isSpeaking} />
-          <span className="text-xs mt-1">{isSpeaking ? 'Speaking' : 'Waiting'}</span>
-        </div>
+      <div className="flex justify-center">
+        <VoiceVisualizer isActive={isListening || isSpeaking} isListening={isListening} />
       </div>
     </div>
   );

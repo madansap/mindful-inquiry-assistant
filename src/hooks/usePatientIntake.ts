@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { textToSpeech, playAudio } from '@/services/voiceService';
+import { useConversation } from '@11labs/react';
 import { useToast } from '@/components/ui/use-toast';
 
 export interface Message {
@@ -14,164 +14,74 @@ export const usePatientIntake = () => {
   const { toast } = useToast();
   const [step, setStep] = useState<'welcome' | 'consent' | 'conversation' | 'completed'>('welcome');
   const [consentGiven, setConsentGiven] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [microphoneAccess, setMicrophoneAccess] = useState(false);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUserMessage, setCurrentUserMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [microphoneAccess, setMicrophoneAccess] = useState(false);
-  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-  const [conversationEnded, setConversationEnded] = useState(false);
 
-  const protocolQuestions = [
-    "How have you been feeling lately?",
-    "Can you tell me about any changes in your sleep patterns?",
-    "Have you noticed any changes in your appetite or weight?",
-    "Are you currently taking any medications?",
-    "Have you ever experienced similar symptoms before?",
-    "How would you describe your energy levels throughout the day?",
-    "Do you ever have thoughts of harming yourself or others?",
-    "How would you describe your mood on a typical day?",
-    "Are there any significant stressors in your life right now?",
-    "How do these symptoms affect your daily activities?",
-  ];
-
-  const handleAISpeak = async (text: string) => {
-    try {
-      setIsSpeaking(true);
-      console.log("Generating speech for:", text);
-      const audioUrl = await textToSpeech(text);
-      console.log("Audio URL generated:", audioUrl);
-      await playAudio(audioUrl);
-    } catch (error) {
-      console.error('Error in AI speech:', error);
+  // Initialize ElevenLabs conversation
+  const conversation = useConversation({
+    onConnect: () => console.log("Connected to ElevenLabs"),
+    onDisconnect: () => console.log("Disconnected from ElevenLabs"),
+    onMessage: (message) => {
+      if (message.type === 'final_transcript' || message.type === 'agent_response') {
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          sender: message.type === 'final_transcript' ? 'user' : 'assistant',
+          text: message.text,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, newMessage]);
+      }
+    },
+    onError: (error) => {
+      console.error('Conversation error:', error);
       toast({
         variant: "destructive",
-        title: "Voice Error",
-        description: "Failed to generate AI speech. Please try again.",
+        title: "Conversation Error",
+        description: error.message,
       });
-    } finally {
-      setIsSpeaking(false);
-      
-      // If this was the last question and we've finished speaking, move to completed
-      if (conversationEnded) {
-        setStep('completed');
-      }
-    }
-  };
+    },
+  });
+
+  // Simplified conversation states based on ElevenLabs hook
+  const isListening = conversation.status === 'connected' && !conversation.isSpeaking;
+  const isSpeaking = conversation.isSpeaking;
 
   const requestMicrophoneAccess = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop()); // Release immediately after permission
       setMicrophoneAccess(true);
       
-      const initialMessage = {
-        id: Date.now().toString(),
-        sender: 'assistant' as const,
-        text: "Thank you for providing your consent. I'm going to ask you some questions about your mental health. Please respond honestly, and take your time. Let's start: How have you been feeling lately?",
-        timestamp: new Date(),
-      };
+      // Start conversation with ElevenLabs
+      await conversation.startSession({
+        agentId: "your_agent_id", // Replace with your agent ID from ElevenLabs
+        overrides: {
+          agent: {
+            prompt: {
+              prompt: "You are a friendly medical intake assistant. Your goal is to gather information about the patient's condition in a conversational way. Start by asking how they've been feeling lately.",
+            },
+            firstMessage: "Hello! I'm here to help gather some information about your health. How have you been feeling lately?",
+            language: "en",
+          },
+        },
+      });
       
-      setMessages([initialMessage]);
       setStep('conversation');
-      
-      // Clean up the stream since we only needed it for permission
-      stream.getTracks().forEach(track => track.stop());
-      
-      // Slight delay to make the UI transition feel more natural
-      setTimeout(() => {
-        handleAISpeak(initialMessage.text);
-      }, 500);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       setErrorDialogOpen(true);
     }
   };
 
-  const handleRecordingComplete = async (text: string) => {
-    if (!text) {
-      toast({
-        title: "No speech detected",
-        description: "We couldn't hear your response. Please try again.",
-        variant: "default"
-      });
-      setIsListening(false);
-      setTimeout(() => setIsListening(true), 1000);
-      return;
-    }
-
-    console.log("Recording complete, transcribed text:", text);
-    setIsListening(false);
-    
-    // Update the current message with the transcribed text
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text,
-      timestamp: new Date(),
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setCurrentUserMessage('');
-    setIsTyping(true);
-    
-    // Simulate processing time for a more natural conversation flow
-    setTimeout(() => {
-      setIsTyping(false);
-      
-      const questionIndex = Math.floor(messages.length / 2);
-      let nextQuestion: string;
-      
-      // Check if we've reached the end of our questions
-      if (questionIndex >= protocolQuestions.length - 1) {
-        nextQuestion = "Thank you for sharing all of this information with me. I've gathered enough information to create a comprehensive report for your healthcare provider. The assessment is now complete.";
-        setConversationEnded(true); // Mark that we're at the end
-      } else {
-        nextQuestion = protocolQuestions[questionIndex + 1];
-      }
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'assistant',
-        text: nextQuestion,
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      handleAISpeak(assistantMessage.text);
-    }, 1000);
-  };
-
-  const handleRecordingError = (error: Error) => {
-    console.error("Recording error:", error);
-    toast({
-      variant: "destructive",
-      title: "Recording Error",
-      description: error.message,
-    });
-    
-    // Reset listening state after error
-    setIsListening(false);
-    
-    // Restart listening after a brief pause
-    if (step === 'conversation' && !conversationEnded) {
-      setTimeout(() => setIsListening(true), 2000);
-    }
-  };
-
-  // Start listening whenever the assistant stops speaking (unless we're ending)
+  // Clean up on unmount
   useEffect(() => {
-    if (step === 'conversation' && !isSpeaking && !isListening && messages.length > 0 && !conversationEnded) {
-      const lastMessage = messages[messages.length - 1];
-      
-      if (lastMessage.sender === 'assistant') {
-        console.log("Assistant finished speaking, starting to listen");
-        setTimeout(() => {
-          setIsListening(true);
-        }, 500);
-      }
-    }
-  }, [step, isSpeaking, isListening, messages, conversationEnded]);
+    return () => {
+      conversation.endSession();
+    };
+  }, []);
 
   return {
     step,
@@ -187,7 +97,5 @@ export const usePatientIntake = () => {
     setErrorDialogOpen,
     microphoneAccess,
     requestMicrophoneAccess,
-    handleRecordingComplete,
-    handleRecordingError
   };
 };
