@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
 import ReportViewPage from "./pages/ReportViewPage";
 import PatientIntakePage from "./pages/PatientIntakePage";
@@ -68,4 +69,3 @@ const App = () => (
 );
 
 export default App;
-
