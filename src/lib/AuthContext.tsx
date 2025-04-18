@@ -12,6 +12,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -40,27 +41,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
   const login = async (email: string, password: string) => {
-    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     });
 
-    if (error) {
-      setLoading(false);
-      throw error;
-    }
+    if (error) throw error;
+  };
+
+  const signup = async (email: string, password: string, fullName: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+
+    if (error) throw error;
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
     setUser(null);
     setSession(null);
   };
@@ -72,6 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session,
         loading,
         login,
+        signup,
         logout,
         isAuthenticated: !!user,
       }}
@@ -88,3 +100,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

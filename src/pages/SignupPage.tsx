@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -17,41 +18,43 @@ import { Input } from "@/components/ui/input";
 import AuthLayout from "@/components/layout/AuthLayout";
 import { useAuth } from "@/lib/AuthContext";
 
-const loginSchema = z.object({
+const signupSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  fullName: z.string().min(2, { message: "Full name must be at least 2 characters" }),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type SignupFormValues = z.infer<typeof signupSchema>;
 
-const LoginPage = () => {
-  const { login } = useAuth();
+const SignupPage = () => {
+  const { signup } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       email: "",
       password: "",
+      fullName: "",
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
     try {
-      await login(data.email, data.password);
+      await signup(data.email, data.password, data.fullName);
       toast({
-        title: "Login successful",
-        description: "Welcome back to Mindful Inquiry Assistant",
+        title: "Registration successful",
+        description: "Welcome to Mindful Inquiry Assistant",
       });
       navigate("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Login failed",
-        description: error.message || "Invalid email or password. Please try again.",
+        title: "Registration failed",
+        description: error.message || "Failed to create account. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -60,11 +63,24 @@ const LoginPage = () => {
 
   return (
     <AuthLayout 
-      title="Welcome back" 
-      subtitle="Sign in to your account to continue"
+      title="Create an account" 
+      subtitle="Sign up to get started with Mindful Inquiry Assistant"
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="fullName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="John Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="email"
@@ -92,15 +108,15 @@ const LoginPage = () => {
             )}
           />
           <Button type="submit" className="w-full bg-mindful-primary hover:bg-mindful-primary/90" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Creating account..." : "Create account"}
           </Button>
         </form>
       </Form>
       
       <div className="mt-6 text-center text-sm text-muted-foreground">
         <div className="mb-2">
-          <a href="/signup" className="text-mindful-secondary hover:underline">
-            Don't have an account? Sign up
+          <a href="/login" className="text-mindful-secondary hover:underline">
+            Already have an account? Sign in
           </a>
         </div>
       </div>
@@ -108,4 +124,5 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default SignupPage;
+
