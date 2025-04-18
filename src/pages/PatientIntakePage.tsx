@@ -16,10 +16,13 @@ import { CompletedScreen } from '@/components/intake/CompletedScreen';
 import { IntakeHeader } from '@/components/intake/IntakeHeader';
 import { usePatientIntake } from '@/hooks/usePatientIntake';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ElevenLabsWidget } from '@/components/intake/ElevenLabsWidget';
 
 const PatientIntakePage = () => {
   const { intakeId } = useParams<{ intakeId: string }>();
+  const [useWidgetMode, setUseWidgetMode] = useState(false);
+  
   const {
     step,
     setStep,
@@ -49,8 +52,19 @@ const PatientIntakePage = () => {
   
   // Log important state changes to help with debugging
   useEffect(() => {
-    console.log(`State update - step: ${step}, isListening: ${isListening}, isSpeaking: ${isSpeaking}, isRecording: ${isRecording}`);
-  }, [step, isListening, isSpeaking, isRecording]);
+    console.log(`State update - step: ${step}, isListening: ${isListening}, isSpeaking: ${isSpeaking}, isRecording: ${isRecording}, widgetMode: ${useWidgetMode}`);
+  }, [step, isListening, isSpeaking, isRecording, useWidgetMode]);
+
+  // Toggle between custom implementation and ElevenLabs widget
+  const toggleWidgetMode = () => {
+    if (step === 'conversation') {
+      endSession(); // End current session if in conversation
+    }
+    setUseWidgetMode(prev => !prev);
+    if (step !== 'welcome') {
+      setStep('consent'); // Reset to consent step when switching modes
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -62,10 +76,10 @@ const PatientIntakePage = () => {
           <ConsentScreen
             consentGiven={consentGiven}
             onConsentChange={setConsentGiven}
-            onContinue={requestMicrophoneAccess}
+            onContinue={useWidgetMode ? () => setStep('conversation') : requestMicrophoneAccess}
           />
         )}
-        {step === 'conversation' && (
+        {step === 'conversation' && !useWidgetMode && (
           <ConversationScreen
             messages={messages}
             isListening={isListening}
@@ -77,7 +91,34 @@ const PatientIntakePage = () => {
             isRecording={isRecording}
           />
         )}
+        {step === 'conversation' && useWidgetMode && (
+          <div className="max-w-2xl mx-auto w-full">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">ElevenLabs Widget Mode</h2>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setStep('completed')}
+              >
+                End Session
+              </Button>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <ElevenLabsWidget agentId="BUOFhT6jt80PMXtIH5Wc" />
+            </div>
+          </div>
+        )}
         {step === 'completed' && <CompletedScreen />}
+        
+        <div className="fixed bottom-4 right-4">
+          <Button 
+            variant="secondary"
+            size="sm"
+            onClick={toggleWidgetMode}
+          >
+            {useWidgetMode ? "Use Custom Implementation" : "Use ElevenLabs Widget"}
+          </Button>
+        </div>
       </main>
       
       <footer className="bg-white border-t py-4">

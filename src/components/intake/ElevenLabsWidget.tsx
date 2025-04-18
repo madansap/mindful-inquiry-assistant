@@ -1,5 +1,17 @@
 
 import { useEffect } from 'react';
+import React from 'react';
+
+// Declare the custom element for TypeScript
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'elevenlabs-convai': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        'agent-id': string;
+      }, HTMLElement>;
+    }
+  }
+}
 
 // This component is a utility wrapper for the ElevenLabs widget
 // It can be used alongside or as an alternative to our custom implementation

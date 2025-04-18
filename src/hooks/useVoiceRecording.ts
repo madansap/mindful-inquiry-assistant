@@ -78,9 +78,11 @@ export const useVoiceRecording = ({ onRecordingComplete, onError }: UseVoiceReco
         }
       };
       
-      reader.onerror = (error) => {
-        console.error("Error reading audio file:", error);
-        onError?.(error as Error);
+      reader.onerror = (event) => {
+        // Cast the event as unknown first, then as Error to avoid type issues
+        const error = new Error("Error reading audio file");
+        console.error("Error reading audio file:", event);
+        onError?.(error);
       };
       
       reader.readAsDataURL(audioBlob);

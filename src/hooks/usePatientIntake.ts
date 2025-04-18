@@ -142,7 +142,6 @@ export const usePatientIntake = () => {
       
       try {
         console.log("Sending message to ElevenLabs");
-        // Use the correct method name from the ElevenLabs API
         await conversation.sendMessage(text);
       } catch (error) {
         console.error('Error sending message:', error);
