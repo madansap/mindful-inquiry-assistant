@@ -10,6 +10,11 @@ export interface Message {
   timestamp: Date;
 }
 
+interface ConversationMessage {
+  source: 'user' | 'ai';
+  message: string;
+}
+
 export const usePatientIntake = () => {
   const { toast } = useToast();
   const [step, setStep] = useState<'welcome' | 'consent' | 'conversation' | 'completed'>('welcome');
@@ -36,28 +41,17 @@ export const usePatientIntake = () => {
         description: "Voice assistant session ended",
       });
     },
-    onMessage: (message) => {
-      if (message.source === 'user' || message.source === 'ai') {
-        // Handle the message format properly based on the API structure
-        let messageText = '';
-        if (typeof message === 'object' && message !== null) {
-          // Extract message text based on the actual structure
-          if ('data' in message && message.data && typeof message.data === 'object' && 'message' in message.data) {
-            messageText = message.data.message as string;
-          } else if ('message' in message && typeof message.message === 'string') {
-            messageText = message.message;
-          }
-        }
-
+    onMessage: (msg: ConversationMessage) => {
+      if (msg.source === 'user' || msg.source === 'ai') {
         const newMessage: Message = {
           id: Date.now().toString(),
-          sender: message.source === 'user' ? 'user' : 'assistant',
-          text: messageText,
+          sender: msg.source === 'user' ? 'user' : 'assistant',
+          text: msg.message || '',
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
         
-        if (message.source === 'ai') {
+        if (msg.source === 'ai') {
           setIsTyping(false);
         }
       }
@@ -114,13 +108,8 @@ export const usePatientIntake = () => {
       };
       setMessages(prev => [...prev, userMessage]);
       
-      // Send user message to ElevenLabs using the correct message structure
-      await conversation.send({
-        type: "UserMessage",
-        data: {
-          message: text
-        }
-      });
+      // Send message using the recommended format from ElevenLabs docs
+      await conversation.sendMessage(text);
       setIsTyping(true);
     } else {
       console.error('Cannot send message: Conversation not connected');
