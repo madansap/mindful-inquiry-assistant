@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { useToast } from '@/components/ui/use-toast';
@@ -9,8 +10,8 @@ export interface Message {
   timestamp: Date;
 }
 
-// This should be stored securely in environment variables in a production app
-const ELEVEN_LABS_API_KEY = process.env.ELEVEN_LABS_API_KEY || '';
+// For Vite projects, we need to use import.meta.env instead of process.env
+const ELEVEN_LABS_API_KEY = import.meta.env.VITE_ELEVEN_LABS_API_KEY || '';
 
 export const usePatientIntake = () => {
   const { toast } = useToast();
