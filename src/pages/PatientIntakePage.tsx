@@ -17,7 +17,6 @@ import { useToast } from '@/components/ui/use-toast';
 import VoiceVisualizer from '@/components/voice/VoiceVisualizer';
 import { textToSpeech, playAudio } from '@/services/voiceService';
 
-// Conversation message type
 interface Message {
   id: string;
   sender: 'user' | 'assistant';
@@ -29,7 +28,6 @@ const PatientIntakePage = () => {
   const { intakeId } = useParams<{ intakeId: string }>();
   const { toast } = useToast();
   
-  // State for the intake process
   const [step, setStep] = useState<'welcome' | 'consent' | 'conversation' | 'completed'>('welcome');
   const [consentGiven, setConsentGiven] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -39,11 +37,8 @@ const PatientIntakePage = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [microphoneAccess, setMicrophoneAccess] = useState(false);
-  
-  // New state for handling voice interaction
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Mock protocol questions
   const protocolQuestions = [
     "How have you been feeling lately?",
     "Can you tell me about any changes in your sleep patterns?",
@@ -56,8 +51,7 @@ const PatientIntakePage = () => {
     "Are there any significant stressors in your life right now?",
     "How do these symptoms affect your daily activities?",
   ];
-  
-  // Welcome screen
+
   const WelcomeScreen = () => (
     <div className="max-w-md mx-auto text-center">
       <h1 className="text-2xl font-bold mb-4">Welcome to your Mental Health Assessment</h1>
@@ -75,8 +69,7 @@ const PatientIntakePage = () => {
       </Button>
     </div>
   );
-  
-  // Consent screen
+
   const ConsentScreen = () => (
     <div className="max-w-md mx-auto">
       <h1 className="text-2xl font-bold mb-4 text-center">Please Provide Your Consent</h1>
@@ -105,7 +98,6 @@ const PatientIntakePage = () => {
         <Button 
           onClick={() => {
             if (consentGiven) {
-              // Request microphone access
               requestMicrophoneAccess();
             } else {
               toast({
@@ -123,8 +115,7 @@ const PatientIntakePage = () => {
       </div>
     </div>
   );
-  
-  // Function to handle AI speaking
+
   const handleAISpeak = async (text: string) => {
     try {
       setIsSpeaking(true);
@@ -141,8 +132,7 @@ const PatientIntakePage = () => {
       setIsSpeaking(false);
     }
   };
-  
-  // Modified requestMicrophoneAccess to use real voice
+
   const requestMicrophoneAccess = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -159,35 +149,29 @@ const PatientIntakePage = () => {
       setStep('conversation');
       handleAISpeak(initialMessage.text);
       
-      // Stop the stream as we'll request it again when needed
       stream.getTracks().forEach(track => track.stop());
     } catch (error) {
       console.error('Error accessing microphone:', error);
       setErrorDialogOpen(true);
     }
   };
-  
-  // Simulate speaking and listening
+
   const simulateSpeaking = (text: string) => {
     setIsSpeaking(true);
     
-    // Simulate speech duration based on text length
-    const duration = Math.max(2000, text.length * 40); // 40ms per character, minimum 2 seconds
-    
+    const duration = Math.max(2000, text.length * 40);
     setTimeout(() => {
       setIsSpeaking(false);
     }, duration);
   };
-  
+
   const simulateListening = () => {
     setIsListening(true);
     setCurrentUserMessage('');
     
-    // Random duration between 3-6 seconds for user response
     const duration = 3000 + Math.random() * 3000;
     let messageText = '';
     
-    // Simulate typing with a growing message
     const typingInterval = setInterval(() => {
       const responses = [
         "I've been feeling quite tired lately, and sometimes a bit down.",
@@ -202,11 +186,9 @@ const PatientIntakePage = () => {
         "It's been hard to concentrate at work and I've been more irritable with my family."
       ];
       
-      // Pick a random response
       messageText = responses[Math.floor(Math.random() * responses.length)];
       const progressStep = Math.floor(Math.random() * 10) + 1;
       
-      // Show typing progress
       if (progressStep < messageText.length) {
         setCurrentUserMessage(messageText.substring(0, progressStep));
       }
@@ -217,7 +199,6 @@ const PatientIntakePage = () => {
       setCurrentUserMessage(messageText);
       setIsListening(false);
       
-      // Add the user message to the conversation
       const userMessage: Message = {
         id: Date.now().toString(),
         sender: 'user',
@@ -227,14 +208,11 @@ const PatientIntakePage = () => {
       
       setMessages(prev => [...prev, userMessage]);
       
-      // Simulate assistant thinking
       setIsTyping(true);
       
-      // After a delay, add assistant response
       setTimeout(() => {
         setIsTyping(false);
         
-        // Get next question or wrap up
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           sender: 'assistant',
@@ -245,16 +223,13 @@ const PatientIntakePage = () => {
         setMessages(prev => [...prev, assistantMessage]);
         simulateSpeaking(assistantMessage.text);
       }, 2000);
-      
     }, duration);
   };
-  
+
   const getNextQuestion = (messageCount: number) => {
-    // Each user response gets a follow-up question
     const questionIndex = Math.floor(messageCount / 2);
     
     if (questionIndex >= protocolQuestions.length - 1) {
-      // If we've gone through all the questions, end the conversation
       setTimeout(() => {
         setStep('completed');
       }, 5000);
@@ -264,8 +239,7 @@ const PatientIntakePage = () => {
     
     return protocolQuestions[questionIndex + 1];
   };
-  
-  // Modified effect to handle conversation flow with real voice
+
   useEffect(() => {
     if (step === 'conversation' && !isSpeaking && !isListening && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
@@ -279,11 +253,9 @@ const PatientIntakePage = () => {
       }
     }
   }, [step, isSpeaking, isListening, messages]);
-  
-  // Effect to handle the conversation flow
+
   useEffect(() => {
     if (step === 'conversation' && !isSpeaking && !isListening && messages.length > 0 && messages[messages.length - 1].sender === 'assistant') {
-      // After assistant speaks, wait a bit and then listen for user response
       const timer = setTimeout(() => {
         simulateListening();
       }, 1000);
@@ -291,8 +263,7 @@ const PatientIntakePage = () => {
       return () => clearTimeout(timer);
     }
   }, [step, isSpeaking, isListening, messages]);
-  
-  // Conversation screen
+
   const ConversationScreen = () => (
     <div className="max-w-2xl mx-auto">
       <div className="mb-4 flex items-center justify-between">
@@ -355,7 +326,6 @@ const PatientIntakePage = () => {
             </div>
           ))}
           
-          {/* Current user message while typing */}
           {isListening && currentUserMessage && (
             <div className="flex justify-end">
               <div className="max-w-[80%] rounded-lg p-3 bg-mindful-primary/70 text-white">
@@ -368,7 +338,6 @@ const PatientIntakePage = () => {
             </div>
           )}
           
-          {/* Assistant typing indicator */}
           {isTyping && (
             <div className="flex justify-start">
               <div className="max-w-[80%] rounded-lg p-3 bg-secondary/20 text-secondary-foreground">
@@ -400,8 +369,7 @@ const PatientIntakePage = () => {
       </div>
     </div>
   );
-  
-  // Completed screen
+
   const CompletedScreen = () => (
     <div className="max-w-md mx-auto text-center">
       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -419,14 +387,13 @@ const PatientIntakePage = () => {
       </Button>
     </div>
   );
-  
-  // CheckIcon for completion screen
+
   const CheckIcon = ({ className = "" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
   );
-  
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="bg-white border-b py-4">
@@ -458,7 +425,6 @@ const PatientIntakePage = () => {
         </div>
       </footer>
       
-      {/* Error Dialog */}
       <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -487,7 +453,6 @@ const PatientIntakePage = () => {
   );
 };
 
-// BrainCircuitIcon for the header
 const BrainCircuitIcon = ({ className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 4.24 3 3 0 0 0 .34 5.58 2.5 2.5 0 0 0 2.96 3.08 2.5 2.5 0 0 0 4.91.05L12 20V4.5Z" />

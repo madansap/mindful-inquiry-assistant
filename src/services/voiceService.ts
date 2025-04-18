@@ -15,7 +15,7 @@ export async function textToSpeech(text: string, config: VoiceConfig = defaultVo
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'xi-api-key': '${ELEVEN_LABS_API_KEY}',
+        'xi-api-key': import.meta.env.VITE_ELEVEN_LABS_API_KEY,
       },
       body: JSON.stringify({
         text,
@@ -28,7 +28,8 @@ export async function textToSpeech(text: string, config: VoiceConfig = defaultVo
     });
 
     if (!response.ok) {
-      throw new Error('Failed to convert text to speech');
+      const errorText = await response.text();
+      throw new Error(`Failed to convert text to speech: ${errorText}`);
     }
 
     const audioBlob = await response.blob();
@@ -43,7 +44,10 @@ export function playAudio(audioUrl: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const audio = new Audio(audioUrl);
     audio.onended = () => resolve();
-    audio.onerror = reject;
-    audio.play();
+    audio.onerror = (error) => {
+      console.error('Audio playback error:', error);
+      reject(error);
+    };
+    audio.play().catch(reject);
   });
 }
