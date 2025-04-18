@@ -2,17 +2,13 @@
 import { useState, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { useToast } from '@/components/ui/use-toast';
+import type { Role } from '@11labs/react';
 
 export interface Message {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
   timestamp: Date;
-}
-
-interface ConversationMessage {
-  source: 'user' | 'ai';
-  message: string;
 }
 
 export const usePatientIntake = () => {
@@ -41,17 +37,17 @@ export const usePatientIntake = () => {
         description: "Voice assistant session ended",
       });
     },
-    onMessage: (msg: ConversationMessage) => {
-      if (msg.source === 'user' || msg.source === 'ai') {
+    onMessage: (message: { source: Role; text: string }) => {
+      if (message.source === 'user' || message.source === 'ai') {
         const newMessage: Message = {
           id: Date.now().toString(),
-          sender: msg.source === 'user' ? 'user' : 'assistant',
-          text: msg.message || '',
+          sender: message.source === 'user' ? 'user' : 'assistant',
+          text: message.text,
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
         
-        if (msg.source === 'ai') {
+        if (message.source === 'ai') {
           setIsTyping(false);
         }
       }
@@ -76,9 +72,9 @@ export const usePatientIntake = () => {
       stream.getTracks().forEach(track => track.stop()); // Release immediately after permission
       setMicrophoneAccess(true);
       
-      // Initialize conversation with ElevenLabs
+      // Initialize conversation with ElevenLabs using the new agent ID
       await conversation.startSession({
-        agentId: "yOouXRA03A0kIaUUoxV5",
+        agentId: "BUOFhT6jt80PMXtIH5Wc",
         overrides: {
           agent: {
             prompt: {
@@ -98,7 +94,6 @@ export const usePatientIntake = () => {
   };
 
   const handleRecordingComplete = async (text: string) => {
-    // Only send message if conversation is connected
     if (conversation.status === 'connected') {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -108,9 +103,18 @@ export const usePatientIntake = () => {
       };
       setMessages(prev => [...prev, userMessage]);
       
-      // Send message using the recommended format from ElevenLabs docs
-      await conversation.sendMessage(text);
-      setIsTyping(true);
+      try {
+        // Use conversation.send with text
+        await conversation.send(text);
+        setIsTyping(true);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+        });
+      }
     } else {
       console.error('Cannot send message: Conversation not connected');
       toast({
